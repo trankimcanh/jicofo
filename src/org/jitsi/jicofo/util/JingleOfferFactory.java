@@ -197,6 +197,16 @@ public class JingleOfferFactory
             ulpfec.setName("ulpfec");
             ulpfec.setClockrate(90000);
             rtpDesc.addPayloadType(ulpfec);
+            PayloadTypePacketExtension rtx = new PayloadTypePacketExtension();
+            rtx.setId(96);
+            rtx.setName("rtx");
+            rtx.setClockrate(90000);
+            rtpDesc.addPayloadType(rtx);
+            ParameterPacketExtension rtxApt
+                    = new ParameterPacketExtension();
+            rtxApt.setName("apt");
+            rtxApt.setValue("100");
+            rtx.addParameter(rtxApt);
 
             content.addChildExtension(rtpDesc);
         }
