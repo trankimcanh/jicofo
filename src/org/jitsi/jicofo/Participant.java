@@ -349,6 +349,14 @@ public class Participant
     }
 
     /**
+     * Returns <tt>true</tt> if this peer supports RTX (RFC4588).
+     */
+    public boolean hasRtxSupport()
+    {
+        return supportedFeatures.contains(DiscoveryUtil.FEATURE_SCTP);
+    }
+
+    /**
      * Sets the list of features supported by this participant.
      * @see DiscoveryUtil for the list of predefined feature constants. 
      * @param supportedFeatures the list of features to set.

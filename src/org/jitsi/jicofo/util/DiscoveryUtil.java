@@ -38,16 +38,22 @@ public class DiscoveryUtil
             = "urn:xmpp:jingle:apps:rtp:video";
 
     /**
-     * ICE feature name.  
+     * ICE feature name.
      */
     public final static String FEATURE_ICE
             = "urn:xmpp:jingle:transports:ice-udp:1";
 
     /**
-     * DTLS/SCTP feature name.  
+     * DTLS/SCTP feature name.
      */
     public final static String FEATURE_SCTP
             = "urn:xmpp:jingle:transports:dtls-sctp:1";
+
+    /**
+     * RTX (RFC4588) feature name.
+     */
+    public final static String FEATURE_RTX
+            = "urn:ietf:rfc:4588";
 
     /**
      * The Jingle DTLS feature name (XEP-0320).
@@ -55,12 +61,12 @@ public class DiscoveryUtil
     public final static String FEATURE_DTLS = "urn:xmpp:jingle:apps:dtls:0";
 
     /**
-     * RTCP mux feature name.  
+     * RTCP mux feature name.
      */
     public final static String FEATURE_RTCP_MUX = "urn:ietf:rfc:5761";
 
     /**
-     * RTP bundle feature name. 
+     * RTP bundle feature name.
      */
     public final static String FEATURE_RTP_BUNDLE = "urn:ietf:rfc:5888";
 
