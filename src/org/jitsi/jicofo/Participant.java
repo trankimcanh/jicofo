@@ -353,7 +353,7 @@ public class Participant
      */
     public boolean hasRtxSupport()
     {
-        return supportedFeatures.contains(DiscoveryUtil.FEATURE_SCTP);
+        return supportedFeatures.contains(DiscoveryUtil.FEATURE_RTX);
     }
 
     /**
