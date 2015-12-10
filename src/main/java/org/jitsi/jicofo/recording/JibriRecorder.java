@@ -129,7 +129,10 @@ public class JibriRecorder
             recorderComponentJid == null)
         {
             if (!verifyModeratorRole(iq))
+            {
+                logger.info("Ignoring Jibri request from non-moderator.");
                 return;
+            }
 
             // Check if we have Jibri available
             String jibriJid = conference.getServices().selectJibri();
@@ -145,9 +148,9 @@ public class JibriRecorder
             startIq.setType(IQ.Type.SET);
             startIq.setAction(JibriIq.Action.START);
             startIq.setStreamId(iq.getStreamId());
-            startIq.setUrl(iq.getUrl());
+            startIq.setUrl(conference.getRoomName());
 
-            logger.info("Starting Jibri recording: " + startIq);
+            logger.info("Starting Jibri recording: " + startIq.toXML());
 
             IQ startReply
                 = (IQ) xmpp.getXmppConnection()

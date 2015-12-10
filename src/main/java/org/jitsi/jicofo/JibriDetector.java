@@ -145,15 +145,17 @@ public class JibriDetector
 
     private void onJibriAvailable(XmppChatMember member)
     {
-        logger.info("On Jibri available: " + member.getJabberID());
+        String jibriMucJid = member.getPresence().getFrom();
+        logger.info("On Jibri available: " + jibriMucJid);
 
-        meetServices.jibriAvailable(member.getJabberID());
+        meetServices.jibriAvailable(jibriMucJid);
     }
 
     private void onJibriUnavailable(XmppChatMember member)
     {
-        logger.info("On Jibri unavailable: " + member.getJabberID());
+        String jibriMucJid = member.getPresence().getFrom();
+        logger.info("On Jibri unavailable: " + jibriMucJid);
 
-        meetServices.jibriUnavailable(member.getJabberID());
+        meetServices.jibriUnavailable(jibriMucJid);
     }
 }
