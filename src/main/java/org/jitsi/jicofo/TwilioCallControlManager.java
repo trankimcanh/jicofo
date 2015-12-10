@@ -166,14 +166,24 @@ public class TwilioCallControlManager
             logger.debug("It seems like we don't have any available number." +
                     " Requesting a new one.");
 
-            List<NameValuePair> params = new ArrayList<NameValuePair>();
-            params.add(new BasicNameValuePair("TrunkSid", trunkSid));
+            // first get available
+            Account mainAccount = client.getAccount();
+            Iterator<AvailablePhoneNumber> availableToAllocateNumbers
+                = mainAccount.getAvailablePhoneNumbers().iterator();
+            if (availableToAllocateNumbers.hasNext())
+            {
+                List<NameValuePair> params = new ArrayList<NameValuePair>();
+                params.add(new BasicNameValuePair("TrunkSid", trunkSid));
+                params.add(new BasicNameValuePair("PhoneNumber",
+                    availableToAllocateNumbers.next().getPhoneNumber()));
 
-            IncomingPhoneNumberFactory factory
-                = client.getAccount().getIncomingPhoneNumberFactory();
+                IncomingPhoneNumberFactory factory
+                    = client.getAccount().getIncomingPhoneNumberFactory();
 
-            IncomingPhoneNumber incomingPhoneNumber = factory.create(params);
-            available.add(incomingPhoneNumber.getPhoneNumber());
+                IncomingPhoneNumber incomingPhoneNumber =
+                    factory.create(params);
+                available.add(incomingPhoneNumber.getPhoneNumber());
+            }
         }
 
         if (available.size() == 0)
