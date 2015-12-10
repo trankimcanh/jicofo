@@ -40,6 +40,10 @@ public class JibriRecorder
                     OperationSetJitsiMeetTools.class);
 
         conference.getServices().addJibriListener(this);
+
+        setJibriStatus(
+            conference.getServices().selectJibri() != null ?
+                JibriIq.Status.OFF : JibriIq.Status.UNDEFINED);
     }
 
     @Override

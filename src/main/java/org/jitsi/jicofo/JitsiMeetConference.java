@@ -436,8 +436,6 @@ public class JitsiMeetConference
                 = new JibriRecorder(this, getDirectXmppOpSet());
 
             recorder = jibriRecorder;
-
-            services.addJibriListener(jibriRecorder);
         }
         return recorder;
     }
