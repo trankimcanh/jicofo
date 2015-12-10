@@ -75,7 +75,10 @@ public class JibriRecorder
 
         String from = iq.getFrom();
 
-        if (from.equals(recorderComponentJid))
+        if (recorderComponentJid != null &&
+            (from.equals(recorderComponentJid) ||
+
+            (from +"/").startsWith(recorderComponentJid)))
         {
             processJibriIqFromJibri(iq);
         }
@@ -111,14 +114,17 @@ public class JibriRecorder
 
     private void processJibriIqFromMeet(JibriIq iq, XmppChatMember sender)
     {
-        JibriIq.Status newStatus = iq.getStatus();
+        JibriIq.Action action = iq.getAction();
+
+        if (JibriIq.Action.UNDEFINED.equals(action))
+            return;
 
         logger.info(
             "Jibri request from " + sender.getContactAddress() +
             " iq: " + iq.toXML());
 
         // start ?
-        if (newStatus.equals(JibriIq.Status.ON) &&
+        if (JibriIq.Action.START.equals(action) &&
             JibriIq.Status.OFF.equals(jibriStatus) &&
             recorderComponentJid == null)
         {
@@ -134,13 +140,12 @@ public class JibriRecorder
                 return;
             }
 
-            recorderComponentJid = jibriJid;
-
             JibriIq startIq = new JibriIq();
             startIq.setTo(jibriJid);
             startIq.setType(IQ.Type.SET);
             startIq.setAction(JibriIq.Action.START);
             startIq.setStreamId(iq.getStreamId());
+            startIq.setUrl(iq.getUrl());
 
             logger.info("Starting Jibri recording: " + startIq);
 
@@ -148,10 +153,18 @@ public class JibriRecorder
                 = (IQ) xmpp.getXmppConnection()
                         .sendPacketAndGetReply(startIq);
 
-            logger.info("Start response: " + startReply);
+            logger.info("Start response: " + startReply.toXML());
+
+            if (startReply == null)
+            {
+                sendErrorResponse(iq, XMPPError.Condition.request_timeout, null);
+                return;
+            }
 
             if (IQ.Type.RESULT.equals(startReply.getType()))
             {
+                recorderComponentJid = jibriJid;
+
                 setJibriStatus(JibriIq.Status.PENDING);
 
                 sendResultResponse(iq);
@@ -159,13 +172,18 @@ public class JibriRecorder
             }
             else
             {
-                sendErrorResponse(
-                    iq, XMPPError.Condition.interna_server_error, null);
+                XMPPError error = startReply.getError();
+                if (error == null)
+                {
+                    error
+                        = new XMPPError(XMPPError.Condition.interna_server_error);
+                }
+                sendPacket(IQ.createErrorResponse(iq, error));
                 return;
             }
         }
         // stop ?
-        else if (newStatus.equals(JibriIq.Status.OFF) &&
+        else if (JibriIq.Action.STOP.equals(action) &&
             recorderComponentJid != null &&
             (JibriIq.Status.ON.equals(jibriStatus) ||
              JibriIq.Status.PENDING.equals(jibriStatus)))
@@ -181,12 +199,38 @@ public class JibriRecorder
 
             logger.info("Trying to stop: " + stopRequest.toXML());
 
-            Packet stopReply
-                = xmpp.getXmppConnection().sendPacketAndGetReply(stopRequest);
+            IQ stopReply
+                = (IQ) xmpp.getXmppConnection()
+                            .sendPacketAndGetReply(stopRequest);
 
-            logger.info("Stop response: " + stopReply);
+            logger.info("Stop response: " + stopReply.toXML());
 
-            sendResultResponse(iq);
+            if (stopReply == null)
+            {
+                sendErrorResponse(iq, XMPPError.Condition.request_timeout, null);
+                return;
+            }
+
+            if (IQ.Type.RESULT.equals(stopReply.getType()))
+            {
+                setJibriStatus(JibriIq.Status.OFF);
+
+                sendResultResponse(iq);
+
+                recorderComponentJid = null;
+                return;
+            }
+            else
+            {
+                XMPPError error = stopReply.getError();
+                if (error == null)
+                {
+                    error
+                        = new XMPPError(XMPPError.Condition.interna_server_error);
+                }
+                sendPacket(IQ.createErrorResponse(iq, error));
+                return;
+            }
         }
 
         // Bad request
@@ -239,15 +283,15 @@ public class JibriRecorder
 
     private void processJibriIqFromJibri(JibriIq iq)
     {
-        String from = iq.getFrom();
-        if (!from.equals(recorderComponentJid))
-        {
-            logger.info("Ingored IQ from Jibri: " + iq);
-            return;
-        }
-
         // We have something from Jibri - let's update recording status
-        setJibriStatus(iq.getStatus());
+        JibriIq.Status status = iq.getStatus();
+        if (!JibriIq.Status.UNDEFINED.equals(status))
+        {
+            logger.info("Updating status from Jibri: " + iq.toXML()
+                + " for " + conference.getRoomName());
+
+            setJibriStatus(status);
+        }
     }
 
     synchronized private void setJibriStatus(JibriIq.Status newStatus)
@@ -258,7 +302,9 @@ public class JibriRecorder
 
         recordingStatus.setStatus(newStatus);
 
-        logger.info("Publish new Jibri status: " + recordingStatus.toXML());
+        logger.info(
+            "Publish new Jibri status: " + recordingStatus.toXML() +
+            " in: " + conference.getRoomName());
 
         ChatRoom2 chatRoom2 = conference.getChatRoom();
 

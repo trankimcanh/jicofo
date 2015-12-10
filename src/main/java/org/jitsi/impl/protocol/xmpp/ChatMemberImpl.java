@@ -152,10 +152,16 @@ public class ChatMemberImpl
         return GlobalStatusEnum.ONLINE;
     }
 
+    private String memberJid = null;
+
     @Override
     public String getJabberID()
     {
-        return chatRoom.getMemberJid(address);
+        if (memberJid == null)
+        {
+            memberJid = chatRoom.getMemberJid(address);
+        }
+        return memberJid;
     }
 
     @Override
