@@ -294,6 +294,18 @@ public class JitsiMeetConference
             if (config.getPreConfiguredSipGateway() != null)
             {
                 services.setSipGateway(config.getPreConfiguredSipGateway());
+                CallControlManager callControlManager
+                    = services.getCallControlManager();
+
+                if (callControlManager == null)
+                {
+                    return;
+                }
+
+                callControlManager.requestCallControl(
+                        this,
+                        callControlRequestSuccessCallback,
+                        callControlRequestErrorCallback);
             }
 
             if (protocolProviderHandler.isRegistered())
@@ -312,6 +324,33 @@ public class JitsiMeetConference
             throw e;
         }
     }
+
+    private final Consumer<CallControl> callControlRequestSuccessCallback
+        = new Consumer<CallControl>() {
+
+            @Override
+            public void accept(CallControl callControl)
+            {
+                if (callControl == null)
+                {
+                    return;
+                }
+
+                // Advertise phone and pin.
+                meetTools.sendPresenceExtension(chatRoom,
+                        CallControlPacketExt.forCallControl(callControl));
+            }
+        };
+
+    private final Consumer<Throwable> callControlRequestErrorCallback
+        = new Consumer<Throwable>() {
+
+            @Override
+            public void accept(Throwable throwable)
+            {
+            }
+
+        };
 
     /**
      * Stops the conference, disposes colibri channels and releases all
@@ -1203,6 +1242,7 @@ public class JitsiMeetConference
         chatRoom.destroy(reason, null);
     }
 
+    private CallControl callControl;
     /**
      * Expires the conference on the bridge and other stuff realted to it.
      */
@@ -1213,6 +1253,14 @@ public class JitsiMeetConference
         {
             recorder.dispose();
             recorder = null;
+        }
+
+        CallControlManager callControlManager
+            = services.getCallControlManager();
+
+        if (callControlManager != null)
+        {
+            callControlManager.releaseCallControl(this);
         }
 
         if (colibriConference != null)
