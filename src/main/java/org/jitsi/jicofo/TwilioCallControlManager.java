@@ -123,7 +123,7 @@ public class TwilioCallControlManager
                     return;
                 }
 
-                String pin = String.valueOf(Math.round(Math.random() * 1000));
+                String pin = String.valueOf((int)(Math.random()*1000));
                 String room = conference.getRoomName()
                     .substring(0, conference.getRoomName().indexOf('@'));
 
