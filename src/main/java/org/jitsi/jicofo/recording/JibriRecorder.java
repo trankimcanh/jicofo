@@ -149,6 +149,7 @@ public class JibriRecorder
             startIq.setAction(JibriIq.Action.START);
             startIq.setStreamId(iq.getStreamId());
             startIq.setUrl(conference.getRoomName());
+            startIq.setFollowEntity(iq.getFollowEntity());
 
             logger.info("Starting Jibri recording: " + startIq.toXML());
 
