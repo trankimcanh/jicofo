@@ -98,7 +98,9 @@ public class JibriDetector
 
     private void onMemberLeft(ChatRoomMember chatRoomMember)
     {
-        onJibriUnavailable((XmppChatMember) chatRoomMember);
+        meetServices.onJibriStatusChanged(
+            chatRoomMember.getContactAddress(),
+            JibriStatusPacketExt.Status.UNDEFINED);
     }
 
     private void onMemberJoined(ChatRoomMember chatRoomMember)
@@ -133,29 +135,7 @@ public class JibriDetector
         if (jibriStatus == null)
             return;
 
-        if (JibriStatusPacketExt.Status.IDLE.equals(jibriStatus.getStatus()))
-        {
-            onJibriAvailable(member);
-        }
-        else
-        {
-            onJibriUnavailable(member);
-        }
-    }
-
-    private void onJibriAvailable(XmppChatMember member)
-    {
-        String jibriMucJid = member.getPresence().getFrom();
-        logger.info("On Jibri available: " + jibriMucJid);
-
-        meetServices.jibriAvailable(jibriMucJid);
-    }
-
-    private void onJibriUnavailable(XmppChatMember member)
-    {
-        String jibriMucJid = member.getPresence().getFrom();
-        logger.info("On Jibri unavailable: " + jibriMucJid);
-
-        meetServices.jibriUnavailable(jibriMucJid);
+        meetServices.onJibriStatusChanged(
+            member.getContactAddress(), jibriStatus.getStatus());
     }
 }

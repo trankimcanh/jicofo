@@ -348,28 +348,37 @@ public class JibriRecorder
     }
 
     @Override
-    public void onJibriStatusChanged(String jibriJid, boolean online)
+    public void onJibriStatusChanged(String jibriJid, boolean idle)
     {
         // If we're recording then we listen to status coming from our Jibri
-        if (online && recorderComponentJid != null)
-        {
-            if (JibriIq.Status.UNDEFINED.equals(jibriStatus))
-            {
-                logger.info("Recording enabled");
-                setJibriStatus(JibriIq.Status.OFF);
-            }
-        }
-
+        // through IQs
         if (recorderComponentJid != null)
+            return;
+
+        String jibri = conference.getServices().selectJibri();
+        if (jibri != null)
+        {
+            logger.info("Recording enabled");
+            setJibriStatus(JibriIq.Status.OFF);
+        }
+        else
+        {
+            logger.info("Recording disabled - all jibris are busy");
+            setJibriStatus(JibriIq.Status.UNDEFINED);
+        }
+    }
+
+    @Override
+    public void onJibriOffline(String jibriJid)
+    {
+        if (jibriJid.equals(recorderComponentJid))
         {
             logger.warn("Our recorder went offline: " + recorderComponentJid);
             recorderComponentJid = null;
-
         }
 
         String jibri = conference.getServices().selectJibri();
-        if (jibri == null &&
-            !JibriIq.Status.UNDEFINED.equals(jibriStatus))
+        if (jibri == null && recorderComponentJid == null)
         {
             logger.info("Recording disabled");
             setJibriStatus(JibriIq.Status.UNDEFINED);

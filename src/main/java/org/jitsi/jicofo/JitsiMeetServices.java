@@ -19,6 +19,7 @@ package org.jitsi.jicofo;
 
 import net.java.sip.communicator.impl.protocol.jabber.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jirecon.*;
 import net.java.sip.communicator.util.*;
 
@@ -283,8 +284,8 @@ public class JitsiMeetServices
         this.mucService = mucService;
     }
 
-    private final List<String> jibris
-        = new CopyOnWriteArrayList<String>();
+    private final List<Jibri> jibris
+        = new CopyOnWriteArrayList<Jibri>();
 
     private final List<JibriListener> jibriListeners
         = new CopyOnWriteArrayList<JibriListener>();
@@ -299,27 +300,64 @@ public class JitsiMeetServices
         jibriListeners.remove(l);
     }
 
-    synchronized public void jibriAvailable(String jid)
+    synchronized public void onJibriStatusChanged(
+        String mucJid, JibriStatusPacketExt.Status status)
     {
-        if (!jibris.contains(jid))
-        {
-            jibris.add(jid);
+        Jibri jibri = findJibri(mucJid);
 
-            notifyJibriStatus(jid, true);
+        if (JibriStatusPacketExt.Status.UNDEFINED.equals(status))
+        {
+            if (jibri != null)
+            {
+                jibris.remove(jibri);
+
+                logger.info("Removed jibri: " + mucJid);
+            }
+            notifyJibriOffline(mucJid);
+        }
+        else
+        {
+            if (jibri == null)
+            {
+                jibri = new Jibri(mucJid, status);
+                jibris.add(jibri);
+
+                logger.info("Added jibri: " + mucJid);
+            }
+            else
+            {
+                jibri.status = status;
+            }
+
+
+            if (JibriStatusPacketExt.Status.IDLE.equals(status))
+            {
+                notifyJibriStatus(jibri.mucJid, true);
+            }
+            else if (JibriStatusPacketExt.Status.BUSY.equals(status))
+            {
+                notifyJibriStatus(jibri.mucJid, false);
+            }
+            else
+            {
+                logger.error("Unknown Jibri status: " + status + " for " + mucJid);
+            }
         }
     }
 
-    synchronized public void jibriUnavailable(String jid)
+    private Jibri findJibri(String mucJid)
     {
-        if (jibris.remove(jid))
+        for (Jibri j : jibris)
         {
-            notifyJibriStatus(jid, false);
+            if (j.mucJid.equals(mucJid))
+                return j;
         }
+        return null;
     }
 
     private void notifyJibriStatus(String jibriJid, boolean available)
     {
-        logger.info("Jibri " + jibriJid +" online: " + available);
+        logger.info("Jibri " + jibriJid +" available: " + available);
 
         for (JibriListener l : jibriListeners)
         {
@@ -327,13 +365,48 @@ public class JitsiMeetServices
         }
     }
 
+    private void notifyJibriOffline(String jid)
+    {
+        if (jibris.remove(jid))
+        {
+            logger.info("Jibri " + jid +" went offline");
+
+            for (JibriListener l : jibriListeners)
+            {
+                l.onJibriOffline(jid);
+            }
+        }
+    }
+
     synchronized public String selectJibri()
     {
-        return jibris.size() > 0 ? jibris.get(0) : null;
+        for (Jibri jibri : jibris)
+        {
+            if (JibriStatusPacketExt.Status.IDLE.equals(jibri.status))
+            {
+                return jibri.mucJid;
+            }
+        }
+        return null;
     }
 
     public interface JibriListener
     {
-        void onJibriStatusChanged(String jibriJid, boolean online);
+        void onJibriStatusChanged(String jibriJid, boolean idle);
+
+        void onJibriOffline(String jibriJid);
+    }
+
+    class Jibri
+    {
+        final String mucJid;
+
+        JibriStatusPacketExt.Status status;
+
+        public Jibri(String mucJid, JibriStatusPacketExt.Status status)
+        {
+            this.mucJid = mucJid;
+            this.status = status;
+        }
     }
 }
