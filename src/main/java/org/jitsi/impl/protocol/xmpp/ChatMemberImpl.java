@@ -68,6 +68,8 @@ public class ChatMemberImpl
      */
     private Boolean videoMuted;
 
+    private Presence presence;
+
     public ChatMemberImpl(String participant, ChatRoomImpl chatRoom,
         int joinOrderNumber)
     {
@@ -176,6 +178,8 @@ public class ChatMemberImpl
      */
     void processPresence(Presence presence)
     {
+        this.presence = presence;
+
         VideoMutedExtension videoMutedExt
             = (VideoMutedExtension)
                 presence.getExtension(
@@ -193,5 +197,11 @@ public class ChatMemberImpl
                 videoMuted = newStatus;
             }
         }
+    }
+
+    @Override
+    public Presence getPresence()
+    {
+        return presence;
     }
 }

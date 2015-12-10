@@ -407,6 +407,9 @@ public class JitsiMeetConference
         // Advertise shared Etherpad document
         meetTools.sendPresenceExtension(
             chatRoom, EtherpadPacketExt.forDocumentName(etherpadName));
+
+        // init recorder
+        getRecorder();
     }
 
     private OperationSetDirectSmackXmpp getDirectXmppOpSet()
@@ -426,41 +429,12 @@ public class JitsiMeetConference
     {
         if (recorder == null)
         {
-            OperationSetDirectSmackXmpp xmppOpSet
-                = protocolProviderHandler.getOperationSet(
-                        OperationSetDirectSmackXmpp.class);
+            JibriRecorder jibriRecorder
+                = new JibriRecorder(this, getDirectXmppOpSet());
 
-            String recorderService = services.getJireconRecorder();
-            if (!StringUtils.isNullOrEmpty(recorderService))
-            {
-                recorder
-                    = new JireconRecorder(
-                            getFocusJid(),
-                            services.getJireconRecorder(), xmppOpSet);
-            }
-            else
-            {
-                logger.warn("No recorder service discovered - using JVB");
+            recorder = jibriRecorder;
 
-                if(colibriConference == null)
-                {
-                    return null;
-                }
-
-                String videobridge = colibriConference.getJitsiVideobridge();
-                if (StringUtils.isNullOrEmpty(videobridge))
-                {
-                    //Unable to create JVB recorder, conference not started yet
-                    return null;
-                }
-
-                recorder
-                    = new JvbRecorder(
-                            colibriConference.getConferenceId(),
-                            videobridge,
-                            colibriConference.getName(),
-                            xmppOpSet);
-            }
+            services.addJibriListener(jibriRecorder);
         }
         return recorder;
     }
@@ -1401,7 +1375,7 @@ public class JitsiMeetConference
         return null;
     }
 
-    Participant findParticipantForRoomJid(String roomJid)
+    public Participant findParticipantForRoomJid(String roomJid)
     {
         for (Participant participant : participants)
         {
@@ -1413,7 +1387,7 @@ public class JitsiMeetConference
         return null;
     }
 
-    ChatRoomMemberRole getRoleForMucJid(String mucJid)
+    public ChatRoomMemberRole getRoleForMucJid(String mucJid)
     {
         for (ChatRoomMember member : chatRoom.getMembers())
         {
@@ -1927,7 +1901,7 @@ public class JitsiMeetConference
         return recorder.isRecording() ? State.ON : State.OFF;
     }
 
-    private ChatRoomMember findMember(String from)
+    public ChatRoomMember findMember(String from)
     {
         return chatRoom != null ?
             chatRoom.findChatMember(from) : null;
@@ -2069,6 +2043,11 @@ public class JitsiMeetConference
         {
             stop();
         }
+    }
+
+    public ChatRoom2 getChatRoom()
+    {
+        return chatRoom;
     }
 
     /**

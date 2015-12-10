@@ -142,6 +142,8 @@ public class FocusManager
      */
     private JitsiMeetServices jitsiMeetServices;
 
+    private JibriDetector jibriDetector;
+
     /**
      * Observes and discovers JVB instances and other conference components on
      * our XMPP domain.
@@ -508,6 +510,15 @@ public class FocusManager
         {
             // Do initializations which require valid connection
             meetExtensionsHandler.init();
+
+            if (jibriDetector == null)
+            {
+                jibriDetector
+                    = new JibriDetector(
+                            protocolProviderHandler, jitsiMeetServices);
+
+                jibriDetector.start();
+            }
         }
     }
 

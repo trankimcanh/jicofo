@@ -18,6 +18,7 @@
 package org.jitsi.protocol.xmpp;
 
 import net.java.sip.communicator.service.protocol.*;
+import org.jivesoftware.smack.packet.*;
 
 /**
  * XMPP extended interface of {@link ChatRoomMember}.
@@ -44,4 +45,6 @@ public interface XmppChatMember
      *         video is not muted or <tt>null</tt> if the status is unknown.
      */
     Boolean hasVideoMuted();
+
+    Presence getPresence();
 }

@@ -26,6 +26,7 @@ import org.jitsi.jicofo.util.*;
 import org.jitsi.protocol.xmpp.*;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Class manages discovered components discovery of Jitsi Meet application
@@ -291,5 +292,59 @@ public class JitsiMeetServices
     public void setMucService(String mucService)
     {
         this.mucService = mucService;
+    }
+
+    private final List<String> jibris
+        = new CopyOnWriteArrayList<String>();
+
+    private final List<JibriListener> jibriListeners
+        = new CopyOnWriteArrayList<JibriListener>();
+
+    synchronized public void addJibriListener(JibriListener l)
+    {
+        jibriListeners.add(l);
+    }
+
+    synchronized public void removeJibriListener(JibriListener l)
+    {
+        jibriListeners.remove(l);
+    }
+
+    synchronized public void jibriAvailable(String jid)
+    {
+        if (!jibris.contains(jid))
+        {
+            jibris.add(jid);
+
+            notifyJibriStatus(jid, true);
+        }
+    }
+
+    synchronized public void jibriUnavailable(String jid)
+    {
+        if (jibris.remove(jid))
+        {
+            notifyJibriStatus(jid, false);
+        }
+    }
+
+    private void notifyJibriStatus(String jibriJid, boolean available)
+    {
+        logger.info("Jibri " + jibriJid +" online: " + available);
+
+        for (JibriListener l : jibriListeners)
+        {
+            l.onJibriStatusChanged(jibriJid, available);
+        }
+    }
+
+    synchronized public String selectJibri()
+    {
+        return jibris.size() > 0 ? jibris.get(0) : null;
+    }
+
+    public interface JibriListener
+    {
+        void onJibriStatusChanged(String jibriJid, boolean online);
     }
 }

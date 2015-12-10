@@ -36,7 +36,7 @@ public abstract class Recorder
     /**
      * Recorder component XMPP address.
      */
-    protected final String recorderComponentJid;
+    protected String recorderComponentJid;
 
     /**
      * Smack operation set for current XMPP connection.

@@ -87,6 +87,9 @@ public class ChatRoomImpl
     private CopyOnWriteArrayList<ChatRoomMemberPresenceListener> listeners
         = new CopyOnWriteArrayList<ChatRoomMemberPresenceListener>();
 
+    private CopyOnWriteArrayList<ChatRoomMemberPropertyChangeListener> propListeners
+        = new CopyOnWriteArrayList<ChatRoomMemberPropertyChangeListener>();
+
     /**
      * Local user role listeners.
      */
@@ -480,14 +483,14 @@ public class ChatRoomImpl
     public void addMemberPropertyChangeListener(
         ChatRoomMemberPropertyChangeListener listener)
     {
-
+        propListeners.add(listener);
     }
 
     @Override
     public void removeMemberPropertyChangeListener(
         ChatRoomMemberPropertyChangeListener listener)
     {
-
+        propListeners.remove(listener);
     }
 
     @Override
@@ -803,6 +806,20 @@ public class ChatRoomImpl
         }
     }
 
+    private void notifyMemberPropertyChanged(ChatMemberImpl member)
+    {
+        ChatRoomMemberPropertyChangeEvent event
+            = new ChatRoomMemberPropertyChangeEvent(
+                    member, this,
+                    ChatRoomMemberPropertyChangeEvent.MEMBER_PRESENCE,
+                    null, member.getPresence());
+
+        for (ChatRoomMemberPropertyChangeListener l : propListeners)
+        {
+            l.chatRoomPropertyChanged(event);
+        }
+    }
+
     public Occupant getOccupant(ChatMemberImpl chatMemeber)
     {
         return muc.getOccupant(chatMemeber.getContactAddress());
@@ -933,6 +950,8 @@ public class ChatRoomImpl
                 if (cachedPresence != null)
                 {
                     member.processPresence(cachedPresence);
+
+                    notifyMemberPropertyChanged(member);
                 }
 
                 notifyParticipantJoined(member);
@@ -1218,6 +1237,8 @@ public class ChatRoomImpl
             if (chatMember != null)
             {
                 chatMember.processPresence(presence);
+
+                notifyMemberPropertyChanged(chatMember);
             }
             else
             {

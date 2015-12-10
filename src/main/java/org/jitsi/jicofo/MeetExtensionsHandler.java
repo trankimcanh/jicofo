@@ -19,6 +19,7 @@ package org.jitsi.jicofo;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.ColibriConferenceIQ.Recording.*;
+import net.java.sip.communicator.impl.protocol.jabber.extensions.jibri.*;
 import net.java.sip.communicator.impl.protocol.jabber.extensions.rayo.*;
 import net.java.sip.communicator.service.protocol.*;
 import net.java.sip.communicator.util.Logger;
@@ -201,7 +202,7 @@ public class MeetExtensionsHandler
         return packet instanceof MuteIq;
     }
 
-    private String getRoomNameFromMucJid(String mucJid)
+    public static String getRoomNameFromMucJid(String mucJid)
     {
         int atIndex = mucJid.indexOf("@");
         int slashIndex = mucJid.indexOf("/");
