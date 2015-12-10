@@ -108,21 +108,28 @@ public class TwilioCallControlManager
 
         public void run()
         {
-            String number;
-            try
-            {
-                number = getNextAvailableNumber();
-            }
-            catch (TwilioRestException e)
-            {
-                this.errorCallback.accept(e);
-                return;
-            }
 
-            String pin = String.valueOf((Math.random() * 999) + 100);
-            String room = conference.getRoomName();
+            CallControl callControl;
+            synchronized (TwilioCallControlManager.this)
+            {
+                String number;
+                try
+                {
+                    number = getNextAvailableNumber();
+                }
+                catch (TwilioRestException e)
+                {
+                    this.errorCallback.accept(e);
+                    return;
+                }
 
-            CallControl callControl = new CallControl(room, number, pin);
+                String pin = String.valueOf(Math.round(Math.random() * 1000));
+                String room = conference.getRoomName()
+                    .substring(0, conference.getRoomName().indexOf('@'));
+
+                callControl = new CallControl(room, number, pin);
+                allocated.put(number, callControl);
+            }
             this.successCallback.accept(callControl);
         }
     }
@@ -139,13 +146,13 @@ public class TwilioCallControlManager
             }
 
             Account mainAccount = client.getAccount();
-            AvailablePhoneNumberList availablePhoneNumbers
-                = mainAccount.getAvailablePhoneNumbers();
+            IncomingPhoneNumberList incomingPhoneNumbers
+                = mainAccount.getIncomingPhoneNumbers();
 
-            for (AvailablePhoneNumber availablePhoneNumber
-                    : availablePhoneNumbers)
+            for (IncomingPhoneNumber incomingPhoneNumber
+                    : incomingPhoneNumbers)
             {
-                String phoneNumber = availablePhoneNumber.getPhoneNumber();
+                String phoneNumber = incomingPhoneNumber.getPhoneNumber();
                 available.add(phoneNumber);
                 if (logger.isDebugEnabled())
                 {
@@ -176,7 +183,7 @@ public class TwilioCallControlManager
             return null;
         }
 
-        return available.get(0);
+        return available.remove(0);
     }
 
     public void requestCallControl(
@@ -198,7 +205,8 @@ public class TwilioCallControlManager
             Map.Entry<String, CallControl> pair = it.next();
             CallControl callControl = pair.getValue();
             if (callControl.getRoom() != null
-                    && callControl.getRoom().equals(conference.getRoomName()))
+                    && callControl.getRoom().equals(conference.getRoomName()
+                        .substring(0, conference.getRoomName().indexOf('@'))))
             {
                 it.remove();
                 available.add(callControl.getNumber());

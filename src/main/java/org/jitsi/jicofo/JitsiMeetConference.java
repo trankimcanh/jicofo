@@ -290,20 +290,24 @@ public class JitsiMeetConference
                         preConfiguredBridge);
             }
 
+            logger.debug("Starting conference.");
             // Set pre-configured SIP gateway
             if (config.getPreConfiguredSipGateway() != null)
             {
+                logger.debug("SIP GW found.");
                 services.setSipGateway(config.getPreConfiguredSipGateway());
                 CallControlManager callControlManager
                     = ServiceUtils.getService(
                         FocusBundleActivator.bundleContext,
                         CallControlManager.class);
 
+
                 if (callControlManager == null)
                 {
                     return;
                 }
 
+                logger.debug("Call control manager found. Requesting call control");
                 callControlManager.requestCallControl(
                         this,
                         callControlRequestSuccessCallback,
@@ -335,9 +339,19 @@ public class JitsiMeetConference
             {
                 if (callControl == null)
                 {
+                    logger.warn("The returned CallControl is null!!");
                     return;
                 }
 
+                if (chatRoom == null)
+                {
+                    logger.warn("The chatRoom is null!!");
+                    return;
+                }
+
+                logger.debug("Successfuly allocated a phone number: "
+                        + callControl.toString()
+                        + ". Setting it into presence.");
                 // Advertise phone and pin.
                 meetTools.sendPresenceExtension(chatRoom,
                         CallControlPacketExt.forCallControl(callControl));

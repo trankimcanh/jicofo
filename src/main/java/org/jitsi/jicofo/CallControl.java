@@ -50,5 +50,11 @@ public class CallControl
     {
         return this.number;
     }
+
+    public String toString()
+    {
+        return "room: "
+            + this.room + ", pin: " + this.pin + ", number: " + this.number;
+    }
 }
 

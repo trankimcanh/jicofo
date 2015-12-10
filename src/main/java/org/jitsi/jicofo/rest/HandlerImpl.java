@@ -23,6 +23,7 @@ import javax.servlet.http.*;
 import org.eclipse.jetty.server.*;
 import org.jitsi.jicofo.FocusManager;
 import org.jitsi.rest.*;
+import org.jitsi.util.*;
 import org.osgi.framework.*;
 import org.jitsi.jicofo.*;
 
@@ -35,6 +36,13 @@ import org.jitsi.jicofo.*;
 public class HandlerImpl
     extends AbstractJSONHandler
 {
+    /**
+     * The logger used by this instance.
+     */
+    private final static Logger logger
+        = Logger.getLogger(HandlerImpl.class);
+
+
     /**
      * Initializes a new {@code HandlerImpl} instance within a specific
      * {@code BundleContext}.
@@ -69,11 +77,13 @@ public class HandlerImpl
         else
         {
             String phone = request.getParameter("num");
+            logger.debug("Searching for: " + phone);
             CallControl callControl
                 = callControlManager.getCallControlByPhone(phone);
 
             if (callControl == null)
             {
+                logger.debug("Not found returning 404.");
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             }
             else
