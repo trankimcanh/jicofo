@@ -15,104 +15,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.jitsi.jicofo;
 
-import java.util.*;
-import java.util.concurrent.*;
-import com.twilio.sdk.*;
+package org.jitsi.jicofo;
 
 /**
  * @author George Politis
  */
-class CallControlManager
+public interface CallControlManager
 {
-    public static final String ACCOUNT_SID = "";
-
-    public static final String AUTH_TOKEN = "";
-
-    private final ExecutorService pool = Executors.newFixedThreadPool(10);
+    /**
+     * Asynchronously requests a <tt>CallControl</tt> for a
+     * <tt>JitsiMeetConference</tt>.
+     *
+     * @param conference
+     * @param successCallback
+     * @param errorCallback
+     */
+    void requestCallControl(
+            JitsiMeetConference conference,
+            Consumer<CallControl> successCallback,
+            Consumer<Throwable> errorCallback);
 
     /**
-     * This is a map of allocated phone numbers.
+     * Releases the <tt>CallControl</tt> associated to the
+     * <tt>JitsiMeetConference</tt> passed as a parameter.
+     *
+     * @param conference
      */
-    private Map<String, CallControl> allocated
-        = new HashMap<String, CallControl>();
+    void releaseCallControl( JitsiMeetConference conference);
 
     /**
-     * This is a list of available phone numbers.
+     * Returns the <tt>CallControl</tt> associated to the phone number passed
+     * in as a parameter.
+     *
+     * @param phone
+     * @return
      */
-    private List<String> available = new ArrayList<String>();
-
-    private final TwilioRestClient tc;
-
-    public CallControlManager()
-    {
-        tc = new TwilioRestClient(ACCOUNT_SID, AUTH_TOKEN);
-    }
-
-    class CallControlRequest
-            implements Runnable
-    {
-
-        final private JitsiMeetConference conference;
-        final private Consumer<CallControl> successCallback;
-        final private Consumer<Throwable> errorCallback;
-
-        public CallControlRequest(
-            final JitsiMeetConference conference,
-            final Consumer<CallControl> successCallback,
-            final Consumer<Throwable> errorCallback)
-        {
-            this.conference = conference;
-            this.successCallback = successCallback;
-            this.errorCallback = errorCallback;
-        }
-
-        public void run()
-        {
-            String number = allocateNumber();
-            String pin = String.valueOf((Math.random() * 9999) + 1000);
-            String room = conference.getRoomName();
-
-            CallControl callControl = new CallControl(room, number, pin);
-            this.successCallback.accept(callControl);
-        }
-    }
-
-    private String allocateNumber()
-    {
-        return null;
-    }
-    public void requestCallControl(
-            final JitsiMeetConference conference,
-            final Consumer<CallControl> successCallback,
-            final Consumer<Throwable> errorCallback)
-    {
-
-        pool.execute(new CallControlRequest(
-                    conference, successCallback, errorCallback));
-    }
-
-    public synchronized void releaseCallControl(
-            JitsiMeetConference conference)
-    {
-        Iterator<Map.Entry<String, CallControl>> it
-            = allocated.entrySet().iterator();
-        while (it.hasNext())
-        {
-            Map.Entry<String, CallControl> pair = it.next();
-            CallControl callControl = pair.getValue();
-            if (callControl.getRoom() != null
-                    && callControl.getRoom().equals(conference.getRoomName()))
-            {
-                it.remove();
-                available.add(callControl.getNumber());
-            }
-        }
-    }
-
-    public synchronized Map<String, CallControl> getAllocated()
-    {
-        return new HashMap(allocated);
-    }
+    CallControl getCallControlByPhone(String phone);
 }

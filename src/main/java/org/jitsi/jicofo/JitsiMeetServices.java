@@ -95,11 +95,6 @@ public class JitsiMeetServices
     private final BridgeSelector bridgeSelector;
 
     /**
-     * Manages call control.
-     */
-    private final CallControlManager callControlManager;
-
-    /**
      * Jirecon recorder component XMPP address.
      */
     private String jireconRecorder;
@@ -133,7 +128,6 @@ public class JitsiMeetServices
     public JitsiMeetServices(OperationSetSubscription operationSet)
     {
         this.bridgeSelector = new BridgeSelector(operationSet);
-        this.callControlManager = new CallControlManager();
     }
 
     /**
@@ -270,11 +264,6 @@ public class JitsiMeetServices
     public BridgeSelector getBridgeSelector()
     {
         return bridgeSelector;
-    }
-
-    public CallControlManager getCallControlManager()
-    {
-        return callControlManager;
     }
 
     /**

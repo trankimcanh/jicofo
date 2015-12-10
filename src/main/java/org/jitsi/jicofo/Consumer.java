@@ -18,7 +18,17 @@
 
 package org.jitsi.jicofo;
 
+/**
+ * Represents an operation that accepts a single input argument and returns no
+ * result. This is a poor man's backport of the <tt>Consumer</tt> interface
+ * found in Java 1.8.
+ *
+ * @author George Politis
+ */
 public interface Consumer<T>
 {
+    /**
+     * Performs this operation on the given argument.
+     */
     void accept(T t);
 }

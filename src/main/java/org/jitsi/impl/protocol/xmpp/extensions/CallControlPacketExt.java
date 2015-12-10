@@ -21,8 +21,8 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.*;
 import org.jitsi.jicofo.*;
 
 /**
- * A packet extension used to advertise the name for shared Etherpad document
- * in Jitsi Meet conference.
+ * A packet extension used to advertise the phone number and the pin for a
+ * Jitsi Meet conference, when the SIP gateway is enabled.
  *
  * @author George Politis
  */
@@ -48,10 +48,9 @@ public class CallControlPacketExt
     }
 
     /**
-     * Sets the <tt>name</tt> of Etherpad document to be shared in Jitsi Meet
-     * conference.
+     * Sets the phone number of the Jitsi Meet conference.
      *
-     * @param name the name of the document to set.
+     * @param phoneNumber the phone number of the Jitsi Meet Conference.
      */
     public void setPhoneNumber(String phoneNumber)
     {
@@ -59,17 +58,16 @@ public class CallControlPacketExt
     }
 
     /**
-     * Returns the name of shared Etherpad document.
+     * Returns the phone number of the Jitsi Meet conference.
      */
     public String getPhoneNumber()
     {
         return (String) getAttribute("phone");
     }
     /**
-     * Sets the <tt>name</tt> of Etherpad document to be shared in Jitsi Meet
-     * conference.
+     * Sets the pin number of the Jitsi Meet conference.
      *
-     * @param name the name of the document to set.
+     * @param pin the name of the document to set.
      */
     public void setPin(String pin)
     {
@@ -77,7 +75,7 @@ public class CallControlPacketExt
     }
 
     /**
-     * Returns the name of shared Etherpad document.
+     * Returns the pin number of the Jitsi Meet conference.
      */
     public String getPin()
     {
@@ -85,10 +83,11 @@ public class CallControlPacketExt
     }
 
     /**
-     * Return new Etherpad packet extension instance with given document
-     * <tt>name</tt>.
+     * Return new <tt>CallControlPacketExt</tt> instance for the given
+     * <tt>CallControl</tt>.
      *
-     * @param name the name of shared Etherpad document.
+     * @param callControl the <tt>CallControl</tt> to convert into a
+     * <tt>CallControlPacketExt</tt>.
      */
     public static CallControlPacketExt forCallControl(CallControl callControl)
     {

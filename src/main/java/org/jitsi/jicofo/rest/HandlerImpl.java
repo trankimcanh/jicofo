@@ -24,6 +24,7 @@ import org.eclipse.jetty.server.*;
 import org.jitsi.jicofo.FocusManager;
 import org.jitsi.rest.*;
 import org.osgi.framework.*;
+import org.jitsi.jicofo.*;
 
 /**
  * Implements a Jetty {@code Handler} which is to provide the HTTP interface of
@@ -46,6 +47,47 @@ public class HandlerImpl
         super(bundleContext);
     }
 
+    @Override
+    protected void doGetCallControlJSON(
+            Request baseRequest,
+            HttpServletRequest request,
+            HttpServletResponse response)
+        throws IOException,
+               ServletException
+    {
+        beginResponse(/* target */ null, baseRequest, request, response);
+
+
+        JitsiMeetServices services
+            = getService(JitsiMeetServices.class);
+
+        CallControlManager callControlManager = getCallControlManager();
+        if (callControlManager == null)
+        {
+            response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+        }
+        else
+        {
+            String phone = request.getParameter("num");
+            CallControl callControl
+                = callControlManager.getCallControlByPhone(phone);
+
+            if (callControl == null)
+            {
+                response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            }
+            else
+            {
+                response.getWriter().write("{\"roomName\": \""
+                        + callControl.getRoom()
+                        + "\", \"code\": \"" + callControl.getPin() + "\"}");
+                response.setStatus(HttpServletResponse.SC_OK);
+            }
+        }
+
+        endResponse(/* target */ null, baseRequest, request, response);
+
+    }
     /**
      * {@inheritDoc}
      */
@@ -84,5 +126,10 @@ public class HandlerImpl
     public FocusManager getFocusManager()
     {
         return getService(FocusManager.class);
+    }
+
+    public CallControlManager getCallControlManager()
+    {
+        return getService(CallControlManager.class);
     }
 }

@@ -295,7 +295,9 @@ public class JitsiMeetConference
             {
                 services.setSipGateway(config.getPreConfiguredSipGateway());
                 CallControlManager callControlManager
-                    = services.getCallControlManager();
+                    = ServiceUtils.getService(
+                        FocusBundleActivator.bundleContext,
+                        CallControlManager.class);
 
                 if (callControlManager == null)
                 {
@@ -348,6 +350,7 @@ public class JitsiMeetConference
             @Override
             public void accept(Throwable throwable)
             {
+                logger.error("failed to get twilio phone number", throwable);
             }
 
         };
@@ -1229,8 +1232,9 @@ public class JitsiMeetConference
             recorder = null;
         }
 
-        CallControlManager callControlManager
-            = services.getCallControlManager();
+        CallControlManager callControlManager = ServiceUtils.getService(
+                FocusBundleActivator.bundleContext,
+                CallControlManager.class);
 
         if (callControlManager != null)
         {
