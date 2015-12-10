@@ -410,19 +410,18 @@ public class JitsiMeetConference
         {
             CallControlManager callControlManager
                 = ServiceUtils.getService(
-                FocusBundleActivator.bundleContext,
-                CallControlManager.class);
+                        FocusBundleActivator.bundleContext,
+                        CallControlManager.class);
 
-            if (callControlManager == null)
+            if (callControlManager != null)
             {
-                return;
-            }
 
-            logger.debug("Call control manager found. Requesting call control");
-            callControlManager.requestCallControl(
-                this,
-                callControlRequestSuccessCallback,
-                callControlRequestErrorCallback);
+                logger.debug("Call control manager found. Requesting call control");
+                callControlManager.requestCallControl(
+                    this,
+                    callControlRequestSuccessCallback,
+                    callControlRequestErrorCallback);
+            }
         }
 
         // Advertise shared Etherpad document

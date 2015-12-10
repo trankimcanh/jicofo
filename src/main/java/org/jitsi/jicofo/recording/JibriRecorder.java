@@ -195,46 +195,13 @@ public class JibriRecorder
             if (!verifyModeratorRole(iq))
                 return;
 
-            JibriIq stopRequest = new JibriIq();
-
-            stopRequest.setType(IQ.Type.SET);
-            stopRequest.setTo(recorderComponentJid);
-            stopRequest.setAction(JibriIq.Action.STOP);
-
-            logger.info("Trying to stop: " + stopRequest.toXML());
-
-            IQ stopReply
-                = (IQ) xmpp.getXmppConnection()
-                            .sendPacketAndGetReply(stopRequest);
-
-            logger.info("Stop response: " + stopReply.toXML());
-
-            if (stopReply == null)
+            XMPPError error = sendStopIQ();
+            if (error == null)
             {
-                sendErrorResponse(iq, XMPPError.Condition.request_timeout, null);
-                return;
+                error = new XMPPError(XMPPError.Condition.interna_server_error);
             }
-
-            if (IQ.Type.RESULT.equals(stopReply.getType()))
-            {
-                setJibriStatus(JibriIq.Status.OFF);
-
-                sendResultResponse(iq);
-
-                recorderComponentJid = null;
-                return;
-            }
-            else
-            {
-                XMPPError error = stopReply.getError();
-                if (error == null)
-                {
-                    error
-                        = new XMPPError(XMPPError.Condition.interna_server_error);
-                }
-                sendPacket(IQ.createErrorResponse(iq, error));
-                return;
-            }
+            sendPacket(IQ.createErrorResponse(iq, error));
+            return;
         }
 
         // Bad request
@@ -324,21 +291,67 @@ public class JibriRecorder
     @Override
     public void dispose()
     {
+        logger.info("DISPOSE FOR : " + conference.getRoomName());
+
+        XMPPError error = sendStopIQ();
+        if (error != null)
+        {
+            logger.error("Error when sending stop request: " + error.toXML());
+        }
+
         conference.getServices().removeJibriListener(this);
 
         super.dispose();
     }
 
+    private XMPPError sendStopIQ()
+    {
+        if (recorderComponentJid == null)
+            return null;
+
+        JibriIq stopRequest = new JibriIq();
+
+        stopRequest.setType(IQ.Type.SET);
+        stopRequest.setTo(recorderComponentJid);
+        stopRequest.setAction(JibriIq.Action.STOP);
+
+        logger.info("Trying to stop: " + stopRequest.toXML());
+
+        IQ stopReply
+            = (IQ) xmpp.getXmppConnection()
+                    .sendPacketAndGetReply(stopRequest);
+
+        logger.info("Stop response: " + stopReply.toXML());
+
+        if (stopReply == null)
+        {
+            return new XMPPError(XMPPError.Condition.request_timeout, null);
+        }
+
+        if (IQ.Type.RESULT.equals(stopReply.getType()))
+        {
+            setJibriStatus(JibriIq.Status.OFF);
+
+            recorderComponentJid = null;
+            return null;
+        }
+        else
+        {
+            XMPPError error = stopReply.getError();
+            if (error == null)
+            {
+                error
+                    = new XMPPError(XMPPError.Condition.interna_server_error);
+            }
+            return error;
+        }
+    }
+
     @Override
     public void onJibriStatusChanged(String jibriJid, boolean online)
     {
-        // Recording in progress
-        if (recorderComponentJid != null)
-        {
-            return;
-        }
-
-        if (online)
+        // If we're recording then we listen to status coming from our Jibri
+        if (online && recorderComponentJid != null)
         {
             if (JibriIq.Status.UNDEFINED.equals(jibriStatus))
             {
@@ -346,15 +359,20 @@ public class JibriRecorder
                 setJibriStatus(JibriIq.Status.OFF);
             }
         }
-        else
+
+        if (recorderComponentJid != null)
         {
-            String jibri = conference.getServices().selectJibri();
-            if (jibri == null &&
-                !JibriIq.Status.UNDEFINED.equals(jibriStatus))
-            {
-                logger.info("Recording disabled");
-                setJibriStatus(JibriIq.Status.UNDEFINED);
-            }
+            logger.warn("Our recorder went offline: " + recorderComponentJid);
+            recorderComponentJid = null;
+
+        }
+
+        String jibri = conference.getServices().selectJibri();
+        if (jibri == null &&
+            !JibriIq.Status.UNDEFINED.equals(jibriStatus))
+        {
+            logger.info("Recording disabled");
+            setJibriStatus(JibriIq.Status.UNDEFINED);
         }
     }
 }
