@@ -296,22 +296,6 @@ public class JitsiMeetConference
             {
                 logger.debug("SIP GW found.");
                 services.setSipGateway(config.getPreConfiguredSipGateway());
-                CallControlManager callControlManager
-                    = ServiceUtils.getService(
-                        FocusBundleActivator.bundleContext,
-                        CallControlManager.class);
-
-
-                if (callControlManager == null)
-                {
-                    return;
-                }
-
-                logger.debug("Call control manager found. Requesting call control");
-                callControlManager.requestCallControl(
-                        this,
-                        callControlRequestSuccessCallback,
-                        callControlRequestErrorCallback);
             }
 
             if (protocolProviderHandler.isRegistered())
@@ -420,6 +404,26 @@ public class JitsiMeetConference
         rolesAndPresence.init();
 
         chatRoom.join();
+
+        // as we are in the room now, lets request call control
+        if(services.getSipGateway() != null)
+        {
+            CallControlManager callControlManager
+                = ServiceUtils.getService(
+                FocusBundleActivator.bundleContext,
+                CallControlManager.class);
+
+            if (callControlManager == null)
+            {
+                return;
+            }
+
+            logger.debug("Call control manager found. Requesting call control");
+            callControlManager.requestCallControl(
+                this,
+                callControlRequestSuccessCallback,
+                callControlRequestErrorCallback);
+        }
 
         // Advertise shared Etherpad document
         meetTools.sendPresenceExtension(
