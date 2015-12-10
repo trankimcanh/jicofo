@@ -204,6 +204,10 @@ public class JibriRecorder
             return;
         }
 
+        logger.warn(
+            "Discarded: " + iq.toXML() + " - nothing to be done, " +
+            "recording status:" + jibriStatus);
+
         // Bad request
         sendErrorResponse(iq, XMPPError.Condition.bad_request, "Frig off !");
     }
@@ -254,6 +258,9 @@ public class JibriRecorder
 
     private void processJibriIqFromJibri(JibriIq iq)
     {
+        if (IQ.Type.RESULT.equals(iq.getType()))
+            return;
+
         // We have something from Jibri - let's update recording status
         JibriIq.Status status = iq.getStatus();
         if (!JibriIq.Status.UNDEFINED.equals(status))
@@ -263,6 +270,8 @@ public class JibriRecorder
 
             setJibriStatus(status);
         }
+
+        sendPacket(IQ.createResultIQ(iq));
     }
 
     synchronized private void setJibriStatus(JibriIq.Status newStatus)
