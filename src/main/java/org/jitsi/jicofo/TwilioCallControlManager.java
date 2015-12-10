@@ -24,6 +24,8 @@ import com.twilio.sdk.resource.list.*;
 import com.twilio.sdk.resource.instance.*;
 import com.twilio.sdk.resource.factory.*;
 import org.apache.http.*;
+import org.jitsi.util.*;
+import org.apache.http.message.*;
 
 /**
  * @author George Politis
@@ -34,6 +36,29 @@ public class TwilioCallControlManager
     /**
      */
     private final ExecutorService pool = Executors.newFixedThreadPool(10);
+
+    /**
+     * The logger used by this instance.
+     */
+    private final static Logger logger
+        = Logger.getLogger(TwilioCallControlManager.class);
+
+    /**
+     * The name of configuration property that specifies the user name used by
+     * the focus to login to XMPP server.
+     */
+    public static final String TWILIO_ACCOUNT_SID_PNAME
+        = "org.jitsi.jicofo.TWILIO_ACCOUNT_SID";
+
+    /**
+     * The name of configuration property that specifies the user name used by
+     * the focus to login to XMPP server.
+     */
+    public static final String TWILIO_AUTH_TOKEN_PNAME
+        = "org.jitsi.jicofo.TWILIO_AUTH_TOKEN";
+
+    public static final String TWILIO_TRUNK_SID_PNAME
+        = "org.jitsi.jicofo.TWILIO_TRUNK_SID";
 
     /**
      * This is a map of allocated phone numbers.
@@ -50,12 +75,15 @@ public class TwilioCallControlManager
      */
     private final TwilioRestClient client;
 
+    private final String trunkSid;
     /**
      * Ctor.
      */
-    public TwilioCallControlManager(String accountSid, String authToken)
+    public TwilioCallControlManager(
+            String accountSid, String authToken, String trunkSid)
     {
         client = new TwilioRestClient(accountSid, authToken);
+        this.trunkSid = trunkSid;
     }
 
     /**
@@ -80,7 +108,17 @@ public class TwilioCallControlManager
 
         public void run()
         {
-            String number = allocateNumber();
+            String number;
+            try
+            {
+                number = getNextAvailableNumber();
+            }
+            catch (TwilioRestException e)
+            {
+                this.errorCallback.accept(e);
+                return;
+            }
+
             String pin = String.valueOf((Math.random() * 999) + 100);
             String room = conference.getRoomName();
 
@@ -89,40 +127,56 @@ public class TwilioCallControlManager
         }
     }
 
-    private void refreshPhoneNumbers()
+    private synchronized String getNextAvailableNumber()
+        throws TwilioRestException
     {
-        Account mainAccount = client.getAccount();
-        AvailablePhoneNumberList phoneNumbers
-            = mainAccount.getAvailablePhoneNumbers();
-
-        for (AvailablePhoneNumber number : phoneNumbers)
+        if (available.size() == 0 && allocated.size() == 0)
         {
-            available.add(number.getPhoneNumber());
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("It seems like we're not initialized. Fetching " +
+                        "the available phone numbers from Twilio");
+            }
+
+            Account mainAccount = client.getAccount();
+            AvailablePhoneNumberList availablePhoneNumbers
+                = mainAccount.getAvailablePhoneNumbers();
+
+            for (AvailablePhoneNumber availablePhoneNumber
+                    : availablePhoneNumbers)
+            {
+                String phoneNumber = availablePhoneNumber.getPhoneNumber();
+                available.add(phoneNumber);
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("Adding " + phoneNumber);
+                }
+            }
         }
-    }
 
-    private void createPhoneNumber()
-    {
-        List<NameValuePair> params = new ArrayList<NameValuePair>();
-
-        IncomingPhoneNumberFactory factory
-            = client.getAccount().getIncomingPhoneNumberFactory();
-
-        try
-        {
-        IncomingPhoneNumber incomingPhoneNumber = factory.create(params);
-        }
-        catch (Exception e)
-        {
-        }
-    }
-
-    private synchronized String allocateNumber()
-    {
         if (available.size() == 0)
         {
+            logger.debug("It seems like we don't have any available number." +
+                    " Requesting a new one.");
+
+            List<NameValuePair> params = new ArrayList<NameValuePair>();
+            params.add(new BasicNameValuePair("TrunkSid", trunkSid));
+
+            IncomingPhoneNumberFactory factory
+                = client.getAccount().getIncomingPhoneNumberFactory();
+
+            IncomingPhoneNumber incomingPhoneNumber = factory.create(params);
+            available.add(incomingPhoneNumber.getPhoneNumber());
         }
-        return null;
+
+        if (available.size() == 0)
+        {
+            logger.warn("Oh oh, this is not good. We still not have any " +
+                    "available numbers. Giving up :-(");
+            return null;
+        }
+
+        return available.get(0);
     }
 
     public void requestCallControl(
@@ -148,6 +202,7 @@ public class TwilioCallControlManager
             {
                 it.remove();
                 available.add(callControl.getNumber());
+                break;
             }
         }
     }

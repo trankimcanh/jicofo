@@ -350,7 +350,7 @@ public class JitsiMeetConference
             @Override
             public void accept(Throwable throwable)
             {
-                logger.error("failed to get twilio phone number", throwable);
+                logger.error("Failed to get twilio phone number!", throwable);
             }
 
         };

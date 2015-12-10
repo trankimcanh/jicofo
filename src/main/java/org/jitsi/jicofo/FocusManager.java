@@ -88,20 +88,6 @@ public class FocusManager
         = "org.jitsi.jicofo.FOCUS_USER_NAME";
 
     /**
-     * The name of configuration property that specifies the user name used by
-     * the focus to login to XMPP server.
-     */
-    public static final String TWILIO_ACCOUNT_SID_PNAME
-        = "org.jitsi.jicofo.TWILIO_ACCOUNT_SID";
-
-    /**
-     * The name of configuration property that specifies the user name used by
-     * the focus to login to XMPP server.
-     */
-    public static final String TWILIO_AUTH_TOKEN_PNAME
-        = "org.jitsi.jicofo.TWILIO_AUTH_TOKEN";
-
-    /**
      * The name of configuration property that specifies login password of the
      * focus user. If not provided then anonymous login method is used.
      */
@@ -220,14 +206,19 @@ public class FocusManager
                 JitsiMeetServices.class, jitsiMeetServices, null);
 
         // Start a Twilio CallControlManager.
-        String twilioAccountSid = config.getString(TWILIO_ACCOUNT_SID_PNAME);
-        String twilioAuthToken = config.getString(TWILIO_AUTH_TOKEN_PNAME);
+        String twilioAccountSid = config.getString(
+                TwilioCallControlManager.TWILIO_ACCOUNT_SID_PNAME);
+        String twilioAuthToken = config.getString(
+                TwilioCallControlManager.TWILIO_AUTH_TOKEN_PNAME);
+        String twilioTrunkSid = config.getString(
+                TwilioCallControlManager.TWILIO_TRUNK_SID_PNAME);
         if (twilioAccountSid != null && twilioAccountSid.trim().length() != 0
-                && twilioAuthToken != null && twilioAuthToken.trim().length() != 0)
+                && twilioAuthToken != null && twilioAuthToken.trim().length() != 0
+                && twilioTrunkSid != null && twilioTrunkSid.trim().length() != 0)
         {
             CallControlManager callControlManager
                 = new TwilioCallControlManager(
-                    twilioAccountSid.trim(), twilioAuthToken.trim());
+                    twilioAccountSid.trim(), twilioAuthToken.trim(), twilioTrunkSid.trim());
             FocusBundleActivator
                 .bundleContext.registerService(
                         CallControlManager.class, callControlManager, null);
