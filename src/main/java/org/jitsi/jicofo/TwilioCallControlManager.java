@@ -188,7 +188,7 @@ public class TwilioCallControlManager
 
                 // XXX re-fetch the phone number in an attempt to fix an
                 // exception thrown by the API.
-                incomingPhoneNumber = mainAccount.getIncomingPhoneNumber(pn);
+                incomingPhoneNumber = mainAccount.getIncomingPhoneNumber(incomingPhoneNumber.getSid());
 
                 List<NameValuePair> updateParams
                     = new ArrayList<NameValuePair>();
