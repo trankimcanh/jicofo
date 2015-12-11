@@ -172,16 +172,29 @@ public class TwilioCallControlManager
                 = mainAccount.getAvailablePhoneNumbers().iterator();
             if (availableToAllocateNumbers.hasNext())
             {
-                List<NameValuePair> params = new ArrayList<NameValuePair>();
-                params.add(new BasicNameValuePair("TrunkSid", trunkSid));
-                params.add(new BasicNameValuePair("PhoneNumber",
-                    availableToAllocateNumbers.next().getPhoneNumber()));
+                // 1. Buy a phone number.
+                List<NameValuePair> createParams
+                    = new ArrayList<NameValuePair>();
+                String pn = availableToAllocateNumbers.next().getPhoneNumber();
+                createParams.add(new BasicNameValuePair("PhoneNumber", pn));
 
                 IncomingPhoneNumberFactory factory
                     = client.getAccount().getIncomingPhoneNumberFactory();
 
                 IncomingPhoneNumber incomingPhoneNumber =
-                    factory.create(params);
+                    factory.create(createParams);
+
+                // 2. Configure the phone number we just bought.
+
+                // XXX re-fetch the phone number in an attempt to fix an
+                // exception thrown by the API.
+                incomingPhoneNumber = mainAccount.getIncomingPhoneNumber(pn);
+
+                List<NameValuePair> updateParams
+                    = new ArrayList<NameValuePair>();
+                updateParams.add(new BasicNameValuePair("TrunkSid", trunkSid));
+
+                incomingPhoneNumber.update(updateParams);
                 available.add(incomingPhoneNumber.getPhoneNumber());
             }
         }
