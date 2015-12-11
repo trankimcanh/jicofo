@@ -214,7 +214,7 @@ public class JibriRecorder
 
     private boolean verifyModeratorRole(JibriIq iq)
     {
-        String from = iq.getFrom();
+        /*String from = iq.getFrom();
         ChatRoomMemberRole role = conference.getRoleForMucJid(from);
 
         if (role == null)
@@ -229,7 +229,7 @@ public class JibriRecorder
             // Moderator permission is required
             sendErrorResponse(iq, XMPPError.Condition.not_allowed, null);
             return false;
-        }
+        }*/
         return true;
     }
 
