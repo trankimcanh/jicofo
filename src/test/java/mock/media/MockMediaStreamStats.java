@@ -271,13 +271,13 @@ public class MockMediaStreamStats
     }
 
     @Override
-    public void addNackListener(NACKListener nackListener)
+    public void addRTCPPacketListener(RTCPPacketListener listener)
     {
 
     }
 
     @Override
-    public void addRembListener(REMBListener rembListener)
+    public void removeRTCPPacketListener(RTCPPacketListener listener)
     {
 
     }

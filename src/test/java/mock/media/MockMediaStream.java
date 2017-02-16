@@ -67,12 +67,6 @@ public class MockMediaStream
     }
 
     @Override
-    public RawPacketCache getPacketCache()
-    {
-        return null;
-    }
-
-    @Override
     public RetransmissionRequester getRetransmissionRequester()
     {
         return null;
@@ -171,6 +165,12 @@ public class MockMediaStream
     @Override
     public void injectPacket(RawPacket pkt, boolean data, TransformEngine after)
     {
+    }
+
+    @Override
+    public boolean isKeyFrame(RawPacket pkt)
+    {
+        return false;
     }
 
     @Override
