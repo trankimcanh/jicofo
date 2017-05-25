@@ -155,8 +155,7 @@ public class DiscoveryUtil
     /**
      * Discovers version of given <tt>jid</tt>.
      *
-     * @param xmppOpSet the direct smack operation set which will be used to
-     *                  send the query.
+     * @param connection the connection which will be used to send the query.
      * @param jid       the JID to which version query wil be sent.
      * @param features  the list of <tt>jid</tt> feature which will be used to
      *                  determine support for the version IQ.
@@ -165,7 +164,7 @@ public class DiscoveryUtil
      *         we the query was successful or <tt>null</tt> otherwise.
      */
     static public Version discoverVersion(
-            OperationSetDirectSmackXmpp    xmppOpSet,
+            XmppConnection                connection,
             String                               jid,
             List<String>                    features )
     {
@@ -179,10 +178,7 @@ public class DiscoveryUtil
             Packet response;
             try
             {
-                response
-                    = xmppOpSet
-                        .getXmppConnection()
-                        .sendPacketAndGetReply(versionIq);
+                response = connection.sendPacketAndGetReply(versionIq);
             }
             catch (OperationFailedException e)
             {
@@ -255,6 +251,8 @@ public class DiscoveryUtil
      */
     static public boolean areTheSame(List<String> list1, List<String> list2)
     {
-        return list1.size() == list2.size() && list2.containsAll(list1);
+        return list1.size() == list2.size()
+            && list2.containsAll(list1)
+            && list1.containsAll(list2);
     }
 }

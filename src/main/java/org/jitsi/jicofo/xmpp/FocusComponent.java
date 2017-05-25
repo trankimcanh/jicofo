@@ -34,7 +34,6 @@ import org.jitsi.xmpp.util.*;
 import org.jivesoftware.smack.packet.*;
 
 import org.osgi.framework.*;
-import org.xmpp.component.*;
 import org.xmpp.packet.IQ;
 
 /**
@@ -61,7 +60,7 @@ public class FocusComponent
         = "org.jitsi.jicofo.SHUTDOWN_ALLOWED_JID";
 
     /**
-     * The JID from which shutdown request are accepted.
+     * The JID from which shutdown requests are accepted.
      */
     private String shutdownAllowedJid;
 
@@ -204,32 +203,14 @@ public class FocusComponent
         try
         {
             org.jivesoftware.smack.packet.IQ smackIq = IQUtils.convert(iq);
-            if (smackIq instanceof ColibriStatsIQ)
-            {
-                // Reply with stats
-                ColibriStatsIQ statsReply = new ColibriStatsIQ();
-
-                statsReply.setType(
-                    org.jivesoftware.smack.packet.IQ.Type.RESULT);
-                statsReply.setPacketID(iq.getID());
-                statsReply.setTo(iq.getFrom().toString());
-
-                int conferenceCount = focusManager.getConferenceCount();
-
-                // Return conference count
-                statsReply.addStat(
-                    new ColibriStatsExtension.Stat(
-                        "conferences",
-                        Integer.toString(conferenceCount)));
-                statsReply.addStat(
-                    new ColibriStatsExtension.Stat(
-                        "graceful_shutdown",
-                        focusManager.isShutdownInProgress()
-                                ? "true" : "false"));
-
-                return IQUtils.convert(statsReply);
-            }
-            else if (smackIq instanceof LoginUrlIQ)
+            // We intentionally don't handle ColibriStatsIQ, because we don't
+            // want to expose it publicly. The code is left because it might
+            // be needed in the near future.
+            //if (smackIq instanceof ColibriStatsIQ)
+            //{
+            //    return handleColibriStatsIQ((ColibriStatsIQ) smackIq);
+            //}
+            if (smackIq instanceof LoginUrlIQ)
             {
                 org.jivesoftware.smack.packet.IQ result
                     = handleAuthUrlIq((LoginUrlIQ) smackIq);
@@ -466,7 +447,8 @@ public class FocusComponent
                         String.valueOf(authAuthority.isExternal())));
         }
 
-        if (focusManager.getJitsiMeetServices().getSipGateway() != null)
+        if (focusManager.getJitsiMeetServices().getSipGateway() != null
+            || focusManager.getJitsiMeetServices().getJigasiDetector() != null)
         {
             response.addProperty(
                 new ConferenceIq.Property("sipGatewayEnabled", "true"));
@@ -523,5 +505,37 @@ public class FocusComponent
         logger.info("Sending url: " + result.toXML());
 
         return result;
+    }
+
+    /**
+     * Handles an IQ which contains a COLIBRI "stats" element.
+     * @param iq the iq.
+     * @return the response which should be returned.
+     */
+    private IQ handleColibriStatsIQ(ColibriStatsIQ iq)
+        throws Exception
+    {
+        // Reply with stats
+        ColibriStatsIQ statsReply = new ColibriStatsIQ();
+
+        statsReply.setType(
+            org.jivesoftware.smack.packet.IQ.Type.RESULT);
+        statsReply.setPacketID(iq.getPacketID());
+        statsReply.setTo(iq.getFrom());
+
+        int conferenceCount = focusManager.getConferenceCount();
+
+        // Return conference count
+        statsReply.addStat(
+            new ColibriStatsExtension.Stat(
+                "conferences",
+                Integer.toString(conferenceCount)));
+        statsReply.addStat(
+            new ColibriStatsExtension.Stat(
+                "graceful_shutdown",
+                focusManager.isShutdownInProgress()
+                    ? "true" : "false"));
+
+        return IQUtils.convert(statsReply);
     }
 }

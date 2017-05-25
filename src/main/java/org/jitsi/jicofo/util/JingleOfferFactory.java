@@ -19,10 +19,13 @@ package org.jitsi.jicofo.util;
 
 import net.java.sip.communicator.impl.protocol.jabber.extensions.jingle.*;
 
+import org.jitsi.impl.libjitsi.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.service.neomedia.*;
 import org.jitsi.service.neomedia.codec.*;
 
 import java.net.*;
+import java.util.*;
 
 /**
  * Contains factory methods for creating Jingle offer sent in 'session-invite'
@@ -35,7 +38,103 @@ import java.net.*;
  */
 public class JingleOfferFactory
 {
-    private JingleOfferFactory(){ }
+    /**
+     * The property name of the VP8 payload type to include in the Jingle
+     * session-invite.
+     */
+    public static final String VP8_PT_PNAME = "org.jitsi.jicofo.VP8_PT";
+
+    /**
+     * The property name of the VP8 RTX payload type to include in the Jingle
+     * session-invite.
+     */
+    public static final String VP8_RTX_PT_PNAME = "org.jitsi.jicofo.VP8_RTX_PT";
+
+    /**
+     * The property name of the VP9 payload type to include in the Jingle
+     * session-invite.
+     */
+    public static final String VP9_PT_PNAME = "org.jitsi.jicofo.VP9_PT";
+
+    /**
+     * The property name of the VP9 RTX payload type to include in the Jingle
+     * session-invite.
+     */
+    public static final String VP9_RTX_PT_PNAME
+        = "org.jitsi.jicofo.VP9_RTX_PT";
+
+    /**
+     * The property name of the H264 payload type to include in the Jingle
+     * session-invite.
+     */
+    public static final String H264_PT_PNAME = "org.jitsi.jicofo.H264_PT";
+
+    /**
+     * The property name of the H264 RTX payload type to include in the Jingle
+     * session-invite.
+     */
+    public static final String H264_RTX_PT_PNAME
+        = "org.jitsi.jicofo.H264_RTX_PT";
+
+    /**
+     * The name of the property which enables the inclusion of the
+     * framemarking RTP header extension in the offer.
+     */
+    public static final String ENABLE_FRAMEMARKING_PNAME
+        = "org.jitsi.jicofo.ENABLE_FRAMEMARKING";
+
+    /**
+     * The VP8 payload type to include in the Jingle session-invite.
+     */
+    private final int VP8_PT;
+
+    /**
+     * The VP8 RTX payload type to include in the Jingle session-invite.
+     */
+    private final int VP8_RTX_PT;
+
+    /**
+     * The VP9 payload type to include in the Jingle session-invite.
+     */
+    private final int VP9_PT;
+
+    /**
+     * The VP9 RTX payload type to include in the Jingle session-invite.
+     */
+    private final int VP9_RTX_PT;
+
+    /**
+     * The H264 payload type to include in the Jingle session-invite.
+     */
+    private final int H264_PT;
+
+    /**
+     * The H264 RTX payload type to include in the Jingle session-invite.
+     */
+    private final int H264_RTX_PT;
+
+    /**
+     * Whether to enable the framemarking RTP header extension in created
+     * offers.
+     */
+    private final boolean ENABLE_FRAMEMARKING;
+
+    /**
+     * Ctor.
+     *
+     * @param cfg the {@link ConfigurationService} to pull config options from.
+     */
+    public JingleOfferFactory(ConfigurationService cfg)
+    {
+        VP8_PT = cfg != null ? cfg.getInt(VP8_PT_PNAME, 100) : 100;
+        VP8_RTX_PT = cfg != null ? cfg.getInt(VP8_RTX_PT_PNAME, 96) : 96;
+        VP9_PT = cfg != null ? cfg.getInt(VP9_PT_PNAME, 101) : 101;
+        VP9_RTX_PT = cfg != null ? cfg.getInt(VP9_RTX_PT_PNAME, 97) : 97;
+        H264_PT = cfg != null ? cfg.getInt(H264_PT_PNAME, 107) : 107;
+        H264_RTX_PT = cfg != null ? cfg.getInt(H264_RTX_PT_PNAME, 99) : 99;
+        ENABLE_FRAMEMARKING
+            = cfg != null && cfg.getBoolean(ENABLE_FRAMEMARKING_PNAME, false);
+    }
 
     /**
      * Creates a {@link ContentPacketExtension} for the audio media type that
@@ -49,7 +148,7 @@ public class JingleOfferFactory
      * @return <tt>ContentPacketExtension</tt> for given media type that will be
      *         used in initial conference offer.
      */
-    public static ContentPacketExtension createAudioContent(
+    public ContentPacketExtension createAudioContent(
         boolean disableIce, boolean useDtls, boolean stereo)
     {
         ContentPacketExtension content
@@ -73,7 +172,7 @@ public class JingleOfferFactory
      * @return <tt>ContentPacketExtension</tt> for given media type that will be
      *         used in initial conference offer.
      */
-    public static ContentPacketExtension createDataContent(
+    public ContentPacketExtension createDataContent(
         boolean disableIce, boolean useDtls)
     {
         ContentPacketExtension content
@@ -102,7 +201,7 @@ public class JingleOfferFactory
      * @return <tt>ContentPacketExtension</tt> for given media type that will be
      *         used in initial conference offer.
      */
-    public static ContentPacketExtension createVideoContent(
+    public ContentPacketExtension createVideoContent(
             boolean disableIce, boolean useDtls, boolean useRtx,
             int minBitrate, int startBitrate)
     {
@@ -164,7 +263,7 @@ public class JingleOfferFactory
      * {@link ContentPacketExtension}.
      * @param content the {@link ContentPacketExtension} to add extensions to.
      */
-    private static void addVideoToContent(ContentPacketExtension content,
+    private void addVideoToContent(ContentPacketExtension content,
                                           boolean useRtx,
                                           int minBitrate,
                                           int startBitrate)
@@ -192,10 +291,19 @@ public class JingleOfferFactory
         absSendTime.setURI(URI.create(RTPExtension.ABS_SEND_TIME_URN));
         rtpDesc.addExtmap(absSendTime);
 
+        if (ENABLE_FRAMEMARKING)
+        {
+            // a=extmap:9 urn:ietf:params:rtp-hdrext:framemarking
+            RTPHdrExtPacketExtension framemarking
+                = new RTPHdrExtPacketExtension();
+            framemarking.setID("9");
+            framemarking.setURI(URI.create(RTPExtension.FRAME_MARKING_URN));
+            rtpDesc.addExtmap(framemarking);
+        }
+
         // a=rtpmap:100 VP8/90000
-        int vp8pt = 100;
         PayloadTypePacketExtension vp8
-            = addPayloadTypeExtension(rtpDesc, vp8pt, Constants.VP8, 90000);
+            = addPayloadTypeExtension(rtpDesc, VP8_PT, Constants.VP8, 90000);
 
         // a=rtcp-fb:100 ccm fir
         vp8.addRtcpFeedbackType(createRtcpFbPacketExtension("ccm", "fir"));
@@ -222,9 +330,8 @@ public class JingleOfferFactory
         }
 
         // a=rtpmap:107 H264/90000
-        int h264pt = 107;
         PayloadTypePacketExtension h264
-            = addPayloadTypeExtension(rtpDesc, h264pt, Constants.H264, 90000);
+            = addPayloadTypeExtension(rtpDesc, H264_PT, Constants.H264, 90000);
 
         // a=rtcp-fb:107 ccm fir
         h264.addRtcpFeedbackType(createRtcpFbPacketExtension("ccm", "fir"));
@@ -250,14 +357,42 @@ public class JingleOfferFactory
                 h264, "x-google-start-bitrate", String.valueOf(startBitrate));
         }
 
+        // a=rtpmap:101 VP9/90000
+        PayloadTypePacketExtension vp9
+            = addPayloadTypeExtension(rtpDesc, VP9_PT, Constants.VP9, 90000);
+
+        // a=rtcp-fb:101 ccm fir
+        vp9.addRtcpFeedbackType(createRtcpFbPacketExtension("ccm", "fir"));
+
+        // a=rtcp-fb:101 nack
+        vp9.addRtcpFeedbackType(createRtcpFbPacketExtension("nack", null));
+
+        // a=rtcp-fb:101 nack pli
+        vp9.addRtcpFeedbackType(createRtcpFbPacketExtension("nack", "pli"));
+
+        // a=rtcp-fb:101 goog-remb
+        vp9.addRtcpFeedbackType(createRtcpFbPacketExtension("goog-remb", null));
+
+        if (minBitrate != -1)
+        {
+            addParameterExtension(
+                vp9, "x-google-min-bitrate", String.valueOf(minBitrate));
+        }
+
+        if (startBitrate != -1)
+        {
+            addParameterExtension(
+                vp9, "x-google-start-bitrate", String.valueOf(startBitrate));
+        }
+
         if (useRtx)
         {
             // a=rtpmap:96 rtx/90000
-            PayloadTypePacketExtension rtx
-                = addPayloadTypeExtension(rtpDesc, 96, Constants.RTX, 90000);
+            PayloadTypePacketExtension rtx = addPayloadTypeExtension(
+                rtpDesc, VP8_RTX_PT, Constants.RTX, 90000);
 
             // a=fmtp:96 apt=100
-            addParameterExtension(rtx, "apt", String.valueOf(vp8pt));
+            addParameterExtension(rtx, "apt", String.valueOf(VP8_PT));
 
             // Chrome doesn't have these when it creates an offer, but they were
             // observed in a hangouts conference. Not sure whether they have any
@@ -274,6 +409,20 @@ public class JingleOfferFactory
             // a=rtcp-fb:96 goog-remb
             rtx.addRtcpFeedbackType(
                 createRtcpFbPacketExtension("goog-remb", null));
+
+            // a=rtpmap:99 rtx/90000
+            PayloadTypePacketExtension rtxH264 = addPayloadTypeExtension(
+                rtpDesc, H264_RTX_PT, Constants.RTX, 90000);
+
+            // a=fmtp:99 apt=107
+            addParameterExtension(rtxH264, "apt", String.valueOf(H264_PT));
+
+            // a=rtpmap:97 rtx/90000
+            PayloadTypePacketExtension rtxVP9 = addPayloadTypeExtension(
+                rtpDesc, VP9_RTX_PT, Constants.RTX, 90000);
+
+            // a=fmtp:97 apt=101
+            addParameterExtension(rtxVP9, "apt", String.valueOf(VP9_PT));
         }
 
         // a=rtpmap:116 red/90000
@@ -367,11 +516,6 @@ public class JingleOfferFactory
         ssrcAudioLevel.setID("1");
         ssrcAudioLevel.setURI(URI.create(RTPExtension.SSRC_AUDIO_LEVEL_URN));
         rtpDesc.addExtmap(ssrcAudioLevel);
-        RTPHdrExtPacketExtension absSendTime
-                = new RTPHdrExtPacketExtension();
-        absSendTime.setID("3");
-        absSendTime.setURI(URI.create(RTPExtension.ABS_SEND_TIME_URN));
-        rtpDesc.addExtmap(absSendTime);
 
         // a=rtpmap:111 opus/48000/2
         PayloadTypePacketExtension opus
@@ -422,5 +566,24 @@ public class JingleOfferFactory
         rdpe.setMedia("application");
 
         content.addChildExtension(rdpe);
+    }
+
+    /**
+     * Check if given offer contains video contents.
+     * @param contents the list of <tt>ContentPacketExtension</tt> describing
+     *        Jingle offer.
+     * @return <tt>true</tt> if given offer has video content.
+     */
+    public static boolean containsVideoContent(
+        List<ContentPacketExtension> contents)
+    {
+        for (ContentPacketExtension content : contents)
+        {
+            if (content.getName().equalsIgnoreCase("video"))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

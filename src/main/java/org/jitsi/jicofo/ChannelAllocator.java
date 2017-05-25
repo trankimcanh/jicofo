@@ -134,7 +134,7 @@ public class ChannelAllocator implements Runnable
         {
             discoverFeaturesAndInvite();
         }
-        catch (Exception e)
+        catch (Throwable e)
         {
             logger.error("Exception on participant invite", e);
         }
@@ -280,17 +280,20 @@ public class ChannelAllocator implements Runnable
         boolean useRtx
             = config.isRtxEnabled() && newParticipant.hasRtxSupport();
 
+        JingleOfferFactory jingleOfferFactory
+            = FocusBundleActivator.getJingleOfferFactory();
+
         if (newParticipant.hasAudioSupport())
         {
             contents.add(
-                    JingleOfferFactory.createAudioContent(
+                    jingleOfferFactory.createAudioContent(
                             disableIce, useDtls, config.stereoEnabled()));
         }
 
         if (newParticipant.hasVideoSupport())
         {
             contents.add(
-                    JingleOfferFactory.createVideoContent(
+                jingleOfferFactory.createVideoContent(
                             disableIce, useDtls, useRtx,
                             config.getMinBitrate(),
                             config.getStartBitrate()));
@@ -301,7 +304,7 @@ public class ChannelAllocator implements Runnable
         if (openSctp && newParticipant.hasSctpSupport())
         {
             contents.add(
-                    JingleOfferFactory.createDataContent(disableIce, useDtls));
+                    jingleOfferFactory.createDataContent(disableIce, useDtls));
         }
 
         ColibriConferenceIQ peerChannels = allocateChannels(contents);
@@ -357,14 +360,17 @@ public class ChannelAllocator implements Runnable
                 if (!StringUtils.isNullOrEmpty(enforcedVideoBridge)
                     && bridgeSelector.isJvbOnTheList(enforcedVideoBridge))
                 {
-                    bridge = config.getEnforcedVideobridge();
+                    bridge = enforcedVideoBridge;
                     logger.info(
                             "Will force bridge: " + bridge
                                     + " on: " + meetConference.getRoomName());
                 }
                 else
                 {
-                    bridge = bridgeSelector.selectVideobridge();
+                    BridgeState bridgeState
+                        = bridgeSelector.selectVideobridge(
+                                meetConference, newParticipant);
+                    bridge = bridgeState == null ? null : bridgeState.getJid();
                 }
 
                 if (StringUtils.isNullOrEmpty(bridge))
@@ -408,7 +414,9 @@ public class ChannelAllocator implements Runnable
                 // null means cancelled, because colibriConference has been
                 // disposed by another thread
                 if (peerChannels == null)
+                {
                     return null;
+                }
 
                 bridgeSelector.updateBridgeOperationalStatus(jvb, true);
 
@@ -419,7 +427,7 @@ public class ChannelAllocator implements Runnable
                 }
                 return peerChannels;
             }
-            catch(OperationFailedException exc)
+            catch (OperationFailedException exc)
             {
                 logger.error(
                         "Failed to allocate channels using bridge: " + jvb,
@@ -453,7 +461,10 @@ public class ChannelAllocator implements Runnable
                     if (StringUtils.isNullOrEmpty(
                                 config.getEnforcedVideobridge()))
                     {
-                        jvb = bridgeSelector.selectVideobridge();
+                        BridgeState bridgeState
+                            = bridgeSelector.selectVideobridge(
+                                    meetConference, newParticipant);
+                        jvb = bridgeState == null ? null : bridgeState.getJid();
                     }
                     else
                     {

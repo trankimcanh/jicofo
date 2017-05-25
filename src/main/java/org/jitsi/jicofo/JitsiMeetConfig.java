@@ -41,12 +41,6 @@ public class JitsiMeetConfig
         = Logger.getLogger(JitsiMeetConfig.class);
 
     /**
-     * The name of adaptive last N configuration property. Pass 'true' to enable
-     * or 'false' to disable.
-     */
-    public static final String ADAPTIVE_LAST_N_PNAME = "adaptiveLastN";
-
-    /**
      * The name of the property which specifies the packet delay for the audio
      * channels used in the conference.
      *
@@ -54,13 +48,6 @@ public class JitsiMeetConfig
      * the {@link LipSyncHack} only !
      */
     public static final String AUDIO_PACKET_DELAY = "audioPacketDelay";
-
-    /**
-     * The name of adaptive simulcast configuration property. Pass 'true' to
-     * disable or 'false' to enable.
-     */
-    public static final String DISABLE_ADAPTIVE_SIMULCAST_PNAME
-        = "disableAdaptiveSimulcast";
 
     /**
      * The name of channel last N configuration property. Should be non-negative
@@ -87,12 +74,6 @@ public class JitsiMeetConfig
      * enable or 'false' to disable.
      */
     public static final String OPEN_SCTP_PNAME = "openSctp";
-
-    /**
-     * The name of adaptive simulcast configuration property. Pass 'true' to
-     * enable or 'false' to disable.
-     */
-    public static final String SIMULCAST_MODE_PNAME = "simulcastMode";
 
     /**
      * The name of the configuration property used to configure Jigasi(SIP
@@ -183,25 +164,6 @@ public class JitsiMeetConfig
     }
 
     /**
-     * Returns a boolean value of adaptive last N property or <tt>null</tt>
-     * if it has not been specified.
-     */
-    public Boolean isAdaptiveLastNEnabled()
-    {
-        return getBoolean(ADAPTIVE_LAST_N_PNAME);
-    }
-
-    /**
-     * Returns a boolean value of adaptive simulcast property or <tt>null</tt>
-     * if it has not been specified.
-     */
-    public Boolean isAdaptiveSimulcastEnabled()
-    {
-        Boolean disabled = getBoolean(DISABLE_ADAPTIVE_SIMULCAST_PNAME);
-        return disabled == null || !disabled;
-    }
-
-    /**
      * Return a <tt>Boolean</tt> value of the {@link #ENABLE_LIPSYNC} property
      * (can be <tt>null</tt>).
      */
@@ -217,16 +179,6 @@ public class JitsiMeetConfig
     public Integer getAudioPacketDelay()
     {
         return getInt(AUDIO_PACKET_DELAY);
-    }
-
-    /**
-     * Returns a boolean value of adaptive simulcast property or <tt>null</tt>
-     * if it has not been specified.
-     */
-    public SimulcastMode getSimulcastMode()
-    {
-        String mode = properties.get(SIMULCAST_MODE_PNAME);
-        return SimulcastMode.fromString(mode);
     }
 
     /**

@@ -26,9 +26,11 @@ import org.jitsi.eventadmin.*;
 import org.jitsi.jicofo.discovery.*;
 import org.jitsi.jicofo.discovery.Version;
 import org.jitsi.jicofo.event.*;
+import org.jitsi.jicofo.jigasi.*;
 import org.jitsi.jicofo.recording.jibri.*;
 import org.jitsi.osgi.*;
 import org.jitsi.protocol.xmpp.*;
+import org.jitsi.service.configuration.*;
 import org.jitsi.util.*;
 
 import org.osgi.framework.*;
@@ -36,8 +38,8 @@ import org.osgi.framework.*;
 import java.util.*;
 
 /**
- * Class manages discovered components discovery of Jitsi Meet application
- * services like bridge, recording, SIP gateway and so on...
+ * Class manages discovery of Jitsi Meet application services like
+ * jitsi-videobridge, recording, SIP gateway and so on...
  *
  * @author Pawel Domas
  */
@@ -51,26 +53,12 @@ public class JitsiMeetServices
         = Logger.getLogger(JitsiMeetServices.class);
 
     /**
-     * Feature set advertised by videobridge.
+     * The set of features sufficient for a node to be recognized as a
+     * jitsi-videobridge.
      */
     public static final String[] VIDEOBRIDGE_FEATURES = new String[]
         {
             ColibriConferenceIQ.NAMESPACE,
-            ProtocolProviderServiceJabberImpl
-                .URN_XMPP_JINGLE_DTLS_SRTP,
-            ProtocolProviderServiceJabberImpl
-                .URN_XMPP_JINGLE_ICE_UDP_1,
-            ProtocolProviderServiceJabberImpl
-                .URN_XMPP_JINGLE_RAW_UDP_0
-        };
-
-    /**
-     * Feature set advertised by videobridge which does support health-checks.
-     */
-    public static final String[] VIDEOBRIDGE_FEATURES2 = new String[]
-        {
-            ColibriConferenceIQ.NAMESPACE,
-            DiscoveryUtil.FEATURE_HEALTH_CHECK,
             ProtocolProviderServiceJabberImpl
                 .URN_XMPP_JINGLE_DTLS_SRTP,
             ProtocolProviderServiceJabberImpl
@@ -121,6 +109,17 @@ public class JitsiMeetServices
      * Instance of {@link JibriDetector} which manages Jibri instances.
      */
     private JibriDetector jibriDetector;
+
+    /**
+     * Instance of {@link JigasiDetector} which manages Jigasi instances.
+     */
+    private JigasiDetector jigasiDetector;
+
+    /**
+     * {@link JibriDetector} which manages Jibri SIP instances
+     * (video SIP gateway).
+     */
+    private JibriDetector sipJibriDetector;
 
     /**
      * The name of XMPP domain to which Jicofo user logs in.
@@ -260,7 +259,7 @@ public class JitsiMeetServices
     }
 
     /**
-     * Call when components goes offline.
+     * Call when a component goes offline.
      *
      * @param node XMPP address of disconnected XMPP component.
      */
@@ -309,6 +308,15 @@ public class JitsiMeetServices
     }
 
     /**
+     * Returns Jibri SIP detector if available.
+     * @return {@link JibriDetector} or <tt>null</tt> if not configured.
+     */
+    public JibriDetector getSipJibriDetector()
+    {
+        return sipJibriDetector;
+    }
+
+    /**
      * Sets new XMPP address of the Jirecon jireconRecorder component.
      * @param jireconRecorder the XMPP address to be set as Jirecon recorder
      *                        component address.
@@ -326,6 +334,16 @@ public class JitsiMeetServices
     public JibriDetector getJibriDetector()
     {
         return jibriDetector;
+    }
+
+    /**
+     * Returns {@link JigasiDetector} instance that manages Jigasi pool used by
+     * this Jicofo process or <tt>null</tt> if unavailable in the current
+     * session.
+     */
+    public JigasiDetector getJigasiDetector()
+    {
+        return jigasiDetector;
     }
 
     /**
@@ -370,16 +388,36 @@ public class JitsiMeetServices
 
         super.start(bundleContext);
 
+        ConfigurationService config = FocusBundleActivator.getConfigService();
         String jibriBreweryName
-            = JibriDetector.loadBreweryName(
-                    FocusBundleActivator.getConfigService());
+            = config.getString(JibriDetector.JIBRI_ROOM_PNAME);
 
         if (!StringUtils.isNullOrEmpty(jibriBreweryName))
         {
             jibriDetector
-                = new JibriDetector(protocolProvider, jibriBreweryName);
+                = new JibriDetector(protocolProvider, jibriBreweryName, false);
 
             jibriDetector.init();
+        }
+
+        String jigasiBreweryName
+            = config.getString(JigasiDetector.JIGASI_ROOM_PNAME);
+        if (!StringUtils.isNullOrEmpty(jigasiBreweryName))
+        {
+            jigasiDetector
+                = new JigasiDetector(protocolProvider, jigasiBreweryName);
+
+            jigasiDetector.init();
+        }
+
+        String jibriSipBreweryName
+            = config.getString(JibriDetector.JIBRI_SIP_ROOM_PNAME);
+        if (!StringUtils.isNullOrEmpty(jibriSipBreweryName))
+        {
+            sipJibriDetector
+                = new JibriDetector(
+                        protocolProvider, jibriSipBreweryName, true);
+            sipJibriDetector.init();
         }
     }
 
@@ -392,6 +430,20 @@ public class JitsiMeetServices
             jibriDetector.dispose();
             jibriDetector = null;
         }
+
+        if (jigasiDetector != null)
+        {
+            jigasiDetector.dispose();
+            jigasiDetector = null;
+        }
+
+        if (sipJibriDetector != null)
+        {
+            sipJibriDetector.dispose();
+            sipJibriDetector = null;
+        }
+
+        bridgeSelector.dispose();
 
         super.stop(bundleContext);
     }

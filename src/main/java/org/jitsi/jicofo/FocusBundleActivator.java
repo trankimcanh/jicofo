@@ -52,6 +52,11 @@ public class FocusBundleActivator
     private static OSGIServiceRef<ConfigurationService> configServiceRef;
 
     /**
+     * The Jingle offer factory to use in this bundle.
+     */
+    private static JingleOfferFactory jingleOfferFactory;
+
+    /**
      * {@link EventAdmin} service reference.
      */
     private static OSGIServiceRef<EventAdmin> eventAdminRef;
@@ -70,7 +75,7 @@ public class FocusBundleActivator
     /**
      * <tt>FocusManager</tt> service registration.
      */
-    private ServiceRegistration<FocusManager> focusMangerRegistration;
+    private ServiceRegistration<FocusManager> focusManagerRegistration;
 
     /**
      * Global configuration of Jitsi COnference FOcus
@@ -95,6 +100,8 @@ public class FocusBundleActivator
         configServiceRef
             = new OSGIServiceRef<>(context, ConfigurationService.class);
 
+        jingleOfferFactory = new JingleOfferFactory(configServiceRef.get());
+
         context.registerService(
             ExecutorService.class, sharedThreadPool, null);
         context.registerService(
@@ -104,7 +111,7 @@ public class FocusBundleActivator
 
         focusManager = new FocusManager();
         focusManager.start();
-        focusMangerRegistration
+        focusManagerRegistration
             = context.registerService(FocusManager.class, focusManager, null);
     }
 
@@ -112,10 +119,10 @@ public class FocusBundleActivator
     public void stop(BundleContext context)
         throws Exception
     {
-        if (focusMangerRegistration != null)
+        if (focusManagerRegistration != null)
         {
-            focusMangerRegistration.unregister();
-            focusMangerRegistration = null;
+            focusManagerRegistration.unregister();
+            focusManagerRegistration = null;
         }
         if (focusManager != null)
         {
@@ -144,6 +151,16 @@ public class FocusBundleActivator
     public static ConfigurationService getConfigService()
     {
         return configServiceRef.get();
+    }
+
+    /**
+     * Gets the Jingle offer factory to use in this bundle.
+     *
+     * @return the Jingle offer factory to use in this bundle
+     */
+    public static JingleOfferFactory getJingleOfferFactory()
+    {
+        return jingleOfferFactory;
     }
 
     /**

@@ -23,6 +23,7 @@ import net.java.sip.communicator.service.protocol.event.*;
 import net.java.sip.communicator.service.protocol.jabber.*;
 import net.java.sip.communicator.util.*;
 
+import org.jitsi.eventadmin.*;
 import org.jitsi.impl.protocol.xmpp.colibri.*;
 import org.jitsi.protocol.xmpp.*;
 import org.jitsi.protocol.xmpp.colibri.*;
@@ -223,7 +224,12 @@ public class XmppProtocolProvider
                 connection.login(login, pass, resource);
             }
 
-            colibriTools.initialize(getConnectionAdapter());
+            EventAdmin eventAdmin
+                = ServiceUtils.getService(
+                    XmppProtocolActivator.bundleContext,
+                    EventAdmin.class);
+
+            colibriTools.initialize(getConnectionAdapter(), eventAdmin);
 
             jingleOpSet.initialize();
 
@@ -422,7 +428,7 @@ public class XmppProtocolProvider
      */
     XmppConnection getConnectionAdapter()
     {
-        if (connectionAdapter == null)
+        if (connectionAdapter == null && connection != null)
         {
             connectionAdapter = new XmppConnectionAdapter(connection);
         }
@@ -594,7 +600,7 @@ public class XmppProtocolProvider
 
         XmppConnectionAdapter(XMPPConnection connection)
         {
-            this.connection = connection;
+            this.connection = Objects.requireNonNull(connection, "connection");
         }
 
         /**
@@ -640,6 +646,25 @@ public class XmppProtocolProvider
             packetCollector.cancel();
 
             return response;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void addPacketHandler(PacketListener listener,
+                                     PacketFilter filter)
+        {
+            connection.addPacketListener(listener, filter);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void removePacketHandler(PacketListener listener)
+        {
+            connection.removePacketListener(listener);
         }
     }
 

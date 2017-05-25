@@ -27,6 +27,8 @@ import net.java.sip.communicator.util.Logger;
 
 import org.jitsi.impl.protocol.xmpp.extensions.*;
 import org.jitsi.jicofo.event.*;
+import org.jitsi.jicofo.jigasi.*;
+import org.jitsi.jicofo.util.*;
 import org.jitsi.protocol.xmpp.*;
 import org.jitsi.protocol.xmpp.colibri.*;
 import org.jitsi.protocol.xmpp.util.*;
@@ -64,7 +66,12 @@ public class MeetExtensionsHandler
     /**
      * Operation set that provider XMPP connection.
      */
-    private OperationSetDirectSmackXmpp smackXmpp;
+    private XmppConnection connection;
+
+    /**
+     * Process packets in different thread, keeping packets receive order.
+     */
+    private QueuePacketProcessor packetProcessor = null;
 
     /**
      * Creates new instance of {@link MeetExtensionsHandler}.
@@ -94,11 +101,16 @@ public class MeetExtensionsHandler
      */
     public void init()
     {
-        this.smackXmpp
+        this.connection
             = focusManager.getOperationSet(
-                    OperationSetDirectSmackXmpp.class);
+                    OperationSetDirectSmackXmpp.class).getXmppConnection();
 
-        smackXmpp.addPacketHandler(this, this);
+        if (this.packetProcessor == null)
+        {
+            this.packetProcessor
+                = new QueuePacketProcessor(connection, this, this);
+            this.packetProcessor.start();
+        }
     }
 
     /**
@@ -106,10 +118,14 @@ public class MeetExtensionsHandler
      */
     public void dispose()
     {
-        if (smackXmpp != null)
+        if (connection != null)
         {
-            smackXmpp.removePacketHandler(this);
-            smackXmpp = null;
+            if (this.packetProcessor != null)
+            {
+                this.packetProcessor.stop();
+                this.packetProcessor = null;
+            }
+            connection = null;
         }
     }
 
@@ -125,7 +141,7 @@ public class MeetExtensionsHandler
     @Override
     public void processPacket(Packet packet)
     {
-        if (smackXmpp == null)
+        if (connection == null)
         {
             logger.error("Not initialized");
             return;
@@ -179,7 +195,7 @@ public class MeetExtensionsHandler
                     "JitsiMeetRecording is null for iq: " + colibriIQ.toXML());
 
             // Internal server error
-            smackXmpp.getXmppConnection().sendPacket(
+            connection.sendPacket(
                     IQ.createErrorResponse(
                             colibriIQ,
                             new XMPPError(
@@ -206,7 +222,7 @@ public class MeetExtensionsHandler
         response.setRecording(
             new ColibriConferenceIQ.Recording(recordingState));
 
-        smackXmpp.getXmppConnection().sendPacket(response);
+        connection.sendPacket(response);
     }
 
     private boolean acceptMuteIq(Packet packet)
@@ -221,7 +237,7 @@ public class MeetExtensionsHandler
         {
             return null;
         }
-        return (JitsiMeetConferenceImpl) focusManager.getConference(roomName);
+        return focusManager.getConference(roomName);
     }
 
     private void handleMuteIq(MuteIq muteIq)
@@ -254,7 +270,7 @@ public class MeetExtensionsHandler
 
                 muteStatusUpdate.setMute(doMute);
 
-                smackXmpp.getXmppConnection().sendPacket(muteStatusUpdate);
+                connection.sendPacket(muteStatusUpdate);
             }
         }
         else
@@ -264,7 +280,7 @@ public class MeetExtensionsHandler
                 new XMPPError(XMPPError.Condition.interna_server_error));
         }
 
-        smackXmpp.getXmppConnection().sendPacket(result);
+        connection.sendPacket(result);
     }
 
     private boolean acceptRayoIq(Packet p)
@@ -292,7 +308,7 @@ public class MeetExtensionsHandler
             IQ error = createErrorResponse(
                 dialIq, new XMPPError(XMPPError.Condition.forbidden));
 
-            smackXmpp.getXmppConnection().sendPacket(error);
+            connection.sendPacket(error);
 
             return;
         }
@@ -303,13 +319,16 @@ public class MeetExtensionsHandler
             IQ error = createErrorResponse(
                 dialIq, new XMPPError(XMPPError.Condition.not_allowed));
 
-            smackXmpp.getXmppConnection().sendPacket(error);
+            connection.sendPacket(error);
 
             return;
         }
 
         // Check if Jigasi is available
-        String jigasiJid = conference.getServices().getSipGateway();
+        String jigasiJid;
+        JigasiDetector detector = conference.getServices().getJigasiDetector();
+        if (detector == null || (jigasiJid = detector.selectJigasi()) == null)
+            jigasiJid = conference.getServices().getSipGateway();
 
         if (StringUtils.isNullOrEmpty(jigasiJid))
         {
@@ -317,7 +336,7 @@ public class MeetExtensionsHandler
             IQ error = createErrorResponse(
                 dialIq, new XMPPError(XMPPError.Condition.service_unavailable));
 
-            smackXmpp.getXmppConnection().sendPacket(error);
+            connection.sendPacket(error);
 
             return;
         }
@@ -331,10 +350,7 @@ public class MeetExtensionsHandler
 
         try
         {
-            IQ reply
-                = (IQ) smackXmpp
-                    .getXmppConnection()
-                    .sendPacketAndGetReply(dialIq);
+            IQ reply = (IQ) connection.sendPacketAndGetReply(dialIq);
             if (reply != null)
             {
                 // Send Jigasi response back to the client
@@ -350,7 +366,7 @@ public class MeetExtensionsHandler
                         new XMPPError(
                                 XMPPError.Condition.remote_server_timeout));
             }
-            smackXmpp.getXmppConnection().sendPacket(reply);
+            connection.sendPacket(reply);
         }
         catch (OperationFailedException e)
         {
@@ -388,7 +404,9 @@ public class MeetExtensionsHandler
         }
 
         if (conference.isFocusMember(from))
+        {
             return; // Not interested in local presence
+        }
 
         ChatRoomMemberRole role = conference.getRoleForMucJid(from);
         if (role == null)
@@ -417,20 +435,13 @@ public class MeetExtensionsHandler
             }
         }
 
+        // TODO: do we actually still need these events fired now that influxdb
+        // has been removed?
         Participant participant = conference.findParticipantForRoomJid(from);
-        ColibriConference colibriConference = conference.getColibriConference();
-
-        if (participant != null && colibriConference != null)
+        if (participant != null)
         {
             // Check if this conference is valid
-            String conferenceId = colibriConference.getConferenceId();
-            if (StringUtils.isNullOrEmpty(conferenceId))
-            {
-                logger.error(
-                        "Unable to send DisplayNameChanged event"
-                            + " - no conference id");
-                return;
-            }
+            String conferenceId = conference.getId();
 
             // Check for changes to the display name
             String oldDisplayName = participant.getDisplayName();

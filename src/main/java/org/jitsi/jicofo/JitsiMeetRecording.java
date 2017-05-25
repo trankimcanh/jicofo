@@ -21,7 +21,6 @@ import net.java.sip.communicator.impl.protocol.jabber.extensions.colibri.*;
 import net.java.sip.communicator.service.protocol.*;
 
 import org.jitsi.jicofo.recording.*;
-import org.jitsi.jicofo.recording.jibri.*;
 import org.jitsi.protocol.xmpp.*;
 import org.jitsi.protocol.xmpp.colibri.*;
 import org.jitsi.util.*;
@@ -70,7 +69,7 @@ public class JitsiMeetRecording
     /**
      * XMPP "operation set" used to send XMPP requests.
      */
-    private final OperationSetDirectSmackXmpp xmppOpSet;
+    private final XmppConnection connection;
 
     /**
      * The logger for this instance. Uses the logging level either of the
@@ -91,9 +90,7 @@ public class JitsiMeetRecording
     {
         this.meetConference = meetConference;
         this.services = meetServices;
-        this.xmppOpSet
-            = meetConference.getXmppProvider().getOperationSet(
-                    OperationSetDirectSmackXmpp.class);
+        this.connection = meetConference.getXmppConnection();
 
         logger = Logger.getLogger(classLogger, meetConference.getLogger());
     }
@@ -126,8 +123,7 @@ public class JitsiMeetRecording
 
     /**
      * Lazy initializer for {@link #recorder}. If there is Jirecon component
-     * service available then {@link JireconRecorder} is used. Otherwise we fall
-     * back to direct videobridge communication through {@link JvbRecorder}.
+     * service available then {@link JireconRecorder} is used.
      *
      * @return {@link Recorder} implementation used by this instance.
      */
@@ -136,46 +132,20 @@ public class JitsiMeetRecording
         if (recorder != null)
             return recorder;
 
-        if (services.getJibriDetector() != null)
-        {
-            recorder = new JibriRecorder(
-                    meetConference, xmppOpSet,
-                    FocusBundleActivator.getSharedThreadPool(),
-                    meetConference.getGlobalConfig());
-            return recorder;
-        }
-
         String recorderService = services.getJireconRecorder();
         if (!StringUtils.isNullOrEmpty(recorderService))
         {
             recorder
                 = new JireconRecorder(
                         meetConference,
-                        services.getJireconRecorder(), xmppOpSet);
+                        services.getJireconRecorder(),
+                        connection);
             return recorder;
         }
         else
         {
-            logger.info("No recorder service discovered - using JVB");
-
-            ColibriConference colibriConference
-                = meetConference.getColibriConference();
-            if(colibriConference == null)
-            {
-                return null;
-            }
-
-            String videobridge = colibriConference.getJitsiVideobridge();
-            if (StringUtils.isNullOrEmpty(videobridge))
-            {
-                //Unable to create JVB recorder, conference not started yet
-                return null;
-            }
-
-            recorder
-                = new JvbRecorder(
-                            meetConference, videobridge, xmppOpSet);
-            return recorder;
+            logger.info("No recorder service discovered.");
+            return null;
         }
     }
 
@@ -289,7 +259,7 @@ public class JitsiMeetRecording
                             new ColibriConferenceIQ.Recording(
                                     ColibriConferenceIQ.Recording.State.ON));
 
-                    xmppOpSet.getXmppConnection().sendPacket(response);
+                    connection.sendPacket(response);
                 }
             }
         }

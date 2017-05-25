@@ -98,11 +98,14 @@ public class ParticipantTest
                 new long[] { 50L, 60L }, cname, msid)
         };
 
+        JingleOfferFactory jingleOfferFactory
+            = FocusBundleActivator.getJingleOfferFactory();
+
         ContentPacketExtension audioContents
-            = JingleOfferFactory.createAudioContent(false, true, true);
+            = jingleOfferFactory.createAudioContent(false, true, true);
 
         ContentPacketExtension videoContents
-            = JingleOfferFactory.createVideoContent(false, true, true, 0, 100);
+            = jingleOfferFactory.createVideoContent(false, true, true, 0, 100);
 
         this.audioRtpDescPe = JingleUtils.getRtpDescription(audioContents);
         this.videoRtpDescPe = JingleUtils.getRtpDescription(videoContents);
@@ -262,6 +265,32 @@ public class ParticipantTest
             assertEquals(
                 "Not grouped SSRC 3 has conflicting MSID 'stream2' with 2",
                 exc.getMessage());
+        }
+    }
+
+    @Test
+    public void testMSIDMismatchInTheSameGroup()
+    {
+        // Overwrite SSRC 20 with something wrong
+        this.videoSSRCs[1]
+            = createGroupSSRC(20L, "blabla", "wrongStream wrongTrack");
+
+        this.addDefaultVideoSSRCs();
+        this.addDefaultVideoGroups();
+
+        try
+        {
+            participant.addSSRCsAndGroupsFromContent(answerContents);
+            fail("Did not detect MSID mismatch in 10+20 FID group");
+        }
+        catch (InvalidSSRCsException exc)
+        {
+            String errorMsg = exc.getMessage();
+            assertTrue(
+                "Invalid message (constant needs update ?): " + errorMsg,
+                errorMsg.startsWith(
+                    "MSID mismatch detected "
+                        + "in group SSRCGroup[FID, 10, 20, ]"));
         }
     }
 

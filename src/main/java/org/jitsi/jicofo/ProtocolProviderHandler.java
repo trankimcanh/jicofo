@@ -19,9 +19,11 @@ package org.jitsi.jicofo;
 
 import net.java.sip.communicator.service.protocol.*;
 import net.java.sip.communicator.service.protocol.event.*;
-
 import net.java.sip.communicator.util.*;
+
+import org.jitsi.impl.protocol.xmpp.*;
 import org.jitsi.jicofo.util.*;
+import org.jitsi.protocol.xmpp.*;
 
 import org.osgi.framework.*;
 
@@ -61,10 +63,10 @@ public class ProtocolProviderHandler
      * instance registration state changes.
      */
     private final List<RegistrationStateChangeListener> regListeners
-        = new CopyOnWriteArrayList<RegistrationStateChangeListener>();
+        = new CopyOnWriteArrayList<>();
 
     /**
-     * Start this instance by created XMPP account using igven parameters.
+     * Start this instance by created XMPP account using the given parameters.
      * @param serverAddress XMPP server address.
      * @param xmppDomain XMPP authentication domain.
      * @param xmppLoginPassword XMPP login(optional).
@@ -199,6 +201,18 @@ public class ProtocolProviderHandler
     public ProtocolProviderService getProtocolProvider()
     {
         return protocolService;
+    }
+
+    /**
+     * Obtains XMPP connection for the underlying XMPP protocol provider
+     * service.
+     * @return {@link XmppConnection} or null if the underlying protocol provider is not registered yet.
+     */
+    public XmppConnection getXmppConnection()
+    {
+        return Objects.requireNonNull(
+                getOperationSet(OperationSetDirectSmackXmpp.class),
+                "OperationSetDirectSmackXmpp").getXmppConnection();
     }
 
     /**

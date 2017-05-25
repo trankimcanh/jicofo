@@ -17,6 +17,7 @@
  */
 package org.jitsi.jicofo.recording;
 
+import org.jitsi.jicofo.util.*;
 import org.jitsi.protocol.xmpp.*;
 
 import org.jivesoftware.smack.*;
@@ -33,6 +34,8 @@ import java.util.*;
  * controlling recording functionality.
  *
  * @author Pawel Domas
+ * @deprecated this class is going away soon together with {@link JvbRecorder}
+ * and {@link JireconRecorder}.
  */
 public abstract class Recorder
     implements PacketListener,
@@ -46,29 +49,39 @@ public abstract class Recorder
     /**
      * Smack operation set for current XMPP connection.
      */
-    protected final OperationSetDirectSmackXmpp xmpp;
+    protected final XmppConnection connection;
+
+    /**
+     * Process packets in different thread, keeping packets receive order.
+     */
+    private QueuePacketProcessor packetProcessor = null;
 
     public Recorder(String recorderComponentJid,
-                    OperationSetDirectSmackXmpp xmpp)
+                    XmppConnection connection)
     {
+        this.connection = Objects.requireNonNull(connection, "connection");
         this.recorderComponentJid = recorderComponentJid;
-
-        this.xmpp = Objects.requireNonNull(xmpp, "xmpp");
-        xmpp.addPacketHandler(this, this);
+        this.packetProcessor = new QueuePacketProcessor(connection, this, this);
     }
 
     /**
      * Method called by {@link org.jitsi.jicofo.JitsiMeetConference} after it
      * joins the MUC.
      */
-    public void init() { }
+    public void init() {
+        this.packetProcessor.start();
+    }
 
     /**
      * Releases resources and stops any future processing.
      */
     public void dispose()
     {
-        xmpp.removePacketHandler(this);
+        if (this.packetProcessor != null)
+        {
+            this.packetProcessor.stop();
+            this.packetProcessor = null;
+        }
     }
 
     /**
